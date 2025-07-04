@@ -13,7 +13,7 @@ const Login = () => {
   const toastShown = useRef(false);
   
   const { login, error, clearError } = useAuth();
-  const { isLoading } = usePublicPage('/admin/dashboard');
+  const { isLoading } = usePublicPage('/inicio');
 
   // Limpiar errores cuando se monta el componente - SOLO UNA VEZ
   useEffect(() => {
