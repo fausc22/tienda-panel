@@ -1,44 +1,62 @@
 import '../styles/globals.css';
-import { AnimatePresence } from 'framer-motion';
+import { AuthProvider } from '../context/AuthContext';
 import { Toaster } from 'react-hot-toast';
-import DefaultLayout from '../components/layout/DefaultLayout';
+import { AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/router';
 
 function MyApp({ Component, pageProps }) {
-  const getLayout = Component.getLayout || ((page) => (
-    <DefaultLayout>{page}</DefaultLayout>
-  ));
+  const router = useRouter();
 
   return (
-    <AnimatePresence>
-      <div className="bg-secondary-light dark:bg-primary-dark transition duration-300">
-        {getLayout(<Component {...pageProps} />)}
-        
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            success: {
-              duration: 3000,
-              style: {
-                background: '#22c55e',
-                color: 'white',
-              },
-            },
-            error: {
+    <AuthProvider>
+      <AnimatePresence mode="wait" initial={false}>
+        <div key={router.route} className="bg-gray-50 min-h-screen">
+          <Component {...pageProps} />
+          
+          {/* Configuración global de notificaciones */}
+          <Toaster
+            position="top-right"
+            toastOptions={{
               duration: 4000,
               style: {
-                background: '#ef4444',
-                color: 'white',
+                background: '#363636',
+                color: '#fff',
+                borderRadius: '8px',
+                padding: '12px 16px',
               },
-            },
-          }}
-        />
-      </div>
-    </AnimatePresence>
+              success: {
+                duration: 3000,
+                style: {
+                  background: '#22c55e',
+                  color: 'white',
+                },
+                iconTheme: {
+                  primary: 'white',
+                  secondary: '#22c55e',
+                },
+              },
+              error: {
+                duration: 4000,
+                style: {
+                  background: '#ef4444',
+                  color: 'white',
+                },
+                iconTheme: {
+                  primary: 'white',
+                  secondary: '#ef4444',
+                },
+              },
+              loading: {
+                style: {
+                  background: '#3b82f6',
+                  color: 'white',
+                },
+              },
+            }}
+          />
+        </div>
+      </AnimatePresence>
+    </AuthProvider>
   );
 }
 
