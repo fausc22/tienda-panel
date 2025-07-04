@@ -1,111 +1,288 @@
-// pages/productos.jsx - Página de gestión de productos
-import { useState, useEffect } from 'react';
+// pages/productos.jsx - Página de gestión de productos refactorizada
+import { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 import { useProtectedPage } from '../hooks/useAuthRedirect';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { 
-  MagnifyingGlassIcon, 
-  PlusIcon, 
-  PencilIcon, 
-  TrashIcon,
-  CubeIcon 
+  CubeIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline';
 
-const ProductosPage = () => {
+// Hooks personalizados
+import { useProductos } from '../hooks/productos/useProductos';
+import { usePaginacion } from '../hooks/usePaginacion';
+
+// Componentes
+import FiltrosProductos from '../components/productos/FiltrosProductos';
+import TablaProductos from '../components/productos/TablaProductos';
+import { Paginacion } from '../components/Paginacion';
+import { 
+  ModalAgregarProducto, 
+  ModalEditarProducto, 
+  ModalEliminarProducto 
+} from '../components/productos/ModalesProductos';
+
+function ProductosContent() {
+  // Hook de autenticación y protección
   const { isLoading: authLoading } = useProtectedPage();
   const { user } = useAuth();
-  
-  // Estados
-  const [productos, setProductos] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredProductos, setFilteredProductos] = useState([]);
 
-  // Datos de ejemplo - reemplazar con llamadas reales a la API
-  const productosEjemplo = [
-    {
-      id: 1,
-      codigo_barra: '7790001234567',
-      nombre: 'Producto Ejemplo 1',
-      precio: 1250.50,
-      stock: 45,
-      categoria: 'Electrónicos',
-      estado: 'Activo'
-    },
-    {
-      id: 2,
-      codigo_barra: '7790001234568',
-      nombre: 'Producto Ejemplo 2', 
-      precio: 890.00,
-      stock: 12,
-      categoria: 'Hogar',
-      estado: 'Activo'
-    },
-    {
-      id: 3,
-      codigo_barra: '7790001234569',
-      nombre: 'Producto Ejemplo 3',
-      precio: 2100.75,
-      stock: 0,
-      categoria: 'Deportes',
-      estado: 'Sin Stock'
+  // ✅ ESTADO ÚNICO PARA MODALES - Solo uno puede estar activo a la vez
+  const [modalState, setModalState] = useState({
+    tipo: null, // 'agregar', 'editar', 'eliminar'
+    producto: null,
+    mostrar: false
+  });
+
+  // Estados para filtros y ordenamiento
+  const [filtrosActivos, setFiltrosActivos] = useState({});
+  const [sortField, setSortField] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc');
+
+  // Hook para gestión de productos
+  const {
+    productos,
+    loading,
+    totalProductos,
+    cargarProductos,
+    crearProducto,
+    actualizarProducto,
+    eliminarProducto,
+    validarProducto,
+    limpiarFiltros,
+    obtenerEstadisticas
+  } = useProductos();
+
+  // Aplicar filtros y ordenamiento a los productos
+  const productosFiltrados = useMemo(() => {
+    let resultado = [...productos];
+
+    // Aplicar filtros avanzados
+    if (filtrosActivos.categoria) {
+      resultado = resultado.filter(p => 
+        (p.categoria || '').toLowerCase().includes(filtrosActivos.categoria.toLowerCase())
+      );
     }
-  ];
 
+    if (filtrosActivos.estado) {
+      switch (filtrosActivos.estado) {
+        case 'en_stock':
+          resultado = resultado.filter(p => (parseInt(p.stock) || 0) > 0);
+          break;
+        case 'stock_bajo':
+          resultado = resultado.filter(p => {
+            const stock = parseInt(p.stock) || 0;
+            return stock > 0 && stock <= 10;
+          });
+          break;
+        case 'sin_stock':
+          resultado = resultado.filter(p => (parseInt(p.stock) || 0) === 0);
+          break;
+        case 'habilitado':
+          resultado = resultado.filter(p => p.habilitado === 'S');
+          break;
+        case 'deshabilitado':
+          resultado = resultado.filter(p => p.habilitado === 'N');
+          break;
+      }
+    }
+
+    if (filtrosActivos.stockMinimo) {
+      const minimo = parseInt(filtrosActivos.stockMinimo);
+      resultado = resultado.filter(p => (parseInt(p.stock) || 0) >= minimo);
+    }
+
+    if (filtrosActivos.stockMaximo) {
+      const maximo = parseInt(filtrosActivos.stockMaximo);
+      resultado = resultado.filter(p => (parseInt(p.stock) || 0) <= maximo);
+    }
+
+    if (filtrosActivos.precioMinimo) {
+      const minimo = parseFloat(filtrosActivos.precioMinimo);
+      resultado = resultado.filter(p => (parseFloat(p.precio) || 0) >= minimo);
+    }
+
+    if (filtrosActivos.precioMaximo) {
+      const maximo = parseFloat(filtrosActivos.precioMaximo);
+      resultado = resultado.filter(p => (parseFloat(p.precio) || 0) <= maximo);
+    }
+
+    // Aplicar ordenamiento
+    if (sortField) {
+      resultado.sort((a, b) => {
+        let aValue = a[sortField];
+        let bValue = b[sortField];
+        
+        // Manejar campos numéricos
+        if (sortField === 'precio' || sortField === 'costo' || sortField === 'stock') {
+          aValue = parseFloat(aValue) || 0;
+          bValue = parseFloat(bValue) || 0;
+        }
+        
+        // Manejar texto
+        if (typeof aValue === 'string') {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+        
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return resultado;
+  }, [productos, filtrosActivos, sortField, sortDirection]);
+
+  // Hook de paginación
+  const {
+    paginaActual,
+    registrosPorPagina,
+    totalPaginas,
+    indexOfPrimero,
+    indexOfUltimo,
+    datosActuales: productosPaginados,
+    cambiarPagina,
+    cambiarRegistrosPorPagina,
+    resetearPaginacion
+  } = usePaginacion(productosFiltrados, 20);
+
+  // Estadísticas de productos filtrados
+  const estadisticas = useMemo(() => {
+    return {
+      total: productosFiltrados.length,
+      conStock: productosFiltrados.filter(p => (parseInt(p.stock) || 0) > 0).length,
+      sinStock: productosFiltrados.filter(p => (parseInt(p.stock) || 0) === 0).length,
+      stockBajo: productosFiltrados.filter(p => {
+        const stock = parseInt(p.stock) || 0;
+        return stock > 0 && stock <= 10;
+      }).length,
+      precioPromedio: productosFiltrados.length > 0 
+        ? productosFiltrados.reduce((acc, p) => acc + (parseFloat(p.precio) || 0), 0) / productosFiltrados.length
+        : 0
+    };
+  }, [productosFiltrados]);
+
+  // Cargar productos al montar el componente
   useEffect(() => {
     if (!authLoading && user) {
-      cargarProductos();
+      console.log('🔄 Usuario cargado, cargando productos:', {
+        usuario: user.nombre || user.username,
+        rol: user.rol
+      });
+      handleCargarProductos('');
     }
   }, [user, authLoading]);
 
-  // Filtrar productos basado en búsqueda
+  // Resetear paginación cuando cambien los filtros
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredProductos(productos);
-    } else {
-      const filtered = productos.filter(producto =>
-        producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        producto.codigo_barra.includes(searchTerm) ||
-        producto.categoria.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredProductos(filtered);
-    }
-  }, [searchTerm, productos]);
+    resetearPaginacion();
+  }, [filtrosActivos, resetearPaginacion]);
 
-  const cargarProductos = async () => {
-    setLoading(true);
-    try {
-      // Simular carga de datos - reemplazar con llamada real a la API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setProductos(productosEjemplo);
-      toast.success('Productos cargados correctamente');
-    } catch (error) {
-      toast.error('Error al cargar productos');
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
+  // HANDLERS para búsqueda y filtros
+  const handleBuscar = async (parametros) => {
+    const { termino, ...filtros } = parametros;
+    
+    // Aplicar filtros locales
+    setFiltrosActivos(filtros);
+    
+    // Si hay término de búsqueda, hacer búsqueda en servidor
+    if (termino && termino.trim().length >= 2) {
+      await cargarProductos(termino);
+    } else if (!termino) {
+      // Si no hay término, cargar todos los productos
+      await handleCargarProductos('');
     }
   };
 
+  const handleCargarProductos = async (searchTerm = '') => {
+    await cargarProductos(searchTerm);
+  };
+
+  const handleLimpiarFiltros = async () => {
+    setFiltrosActivos({});
+    setSortField(null);
+    setSortDirection('asc');
+    await limpiarFiltros();
+  };
+
+  // HANDLERS para ordenamiento
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // ✅ HANDLERS PARA MODALES - Usando estado único
   const handleAgregarProducto = () => {
-    toast.info('Función agregar producto - Por implementar');
+    
+    setModalState({
+      tipo: 'agregar',
+      producto: null,
+      mostrar: true
+    });
   };
 
   const handleEditarProducto = (producto) => {
-    toast.info(`Editar producto: ${producto.nombre} - Por implementar`);
+    
+    setModalState({
+      tipo: 'editar',
+      producto: producto,
+      mostrar: true
+    });
   };
 
   const handleEliminarProducto = (producto) => {
-    toast.info(`Eliminar producto: ${producto.nombre} - Por implementar`);
+    
+    setModalState({
+      tipo: 'eliminar',
+      producto: producto,
+      mostrar: true
+    });
   };
 
-  const getStockStatus = (stock) => {
-    if (stock === 0) return { color: 'text-red-600 bg-red-100', text: 'Sin Stock' };
-    if (stock <= 10) return { color: 'text-orange-600 bg-orange-100', text: 'Stock Bajo' };
-    return { color: 'text-green-600 bg-green-100', text: 'En Stock' };
+  // ✅ FUNCIÓN PARA CERRAR CUALQUIER MODAL
+  const cerrarModal = () => {
+    
+    setModalState({
+      tipo: null,
+      producto: null,
+      mostrar: false
+    });
   };
 
+  // HANDLERS para confirmación de acciones
+  const handleConfirmarAgregar = async (nuevoProducto) => {
+    const exito = await crearProducto(nuevoProducto);
+    if (exito) {
+      cerrarModal();
+      // Recargar productos para mostrar el nuevo
+      await handleCargarProductos('');
+    }
+    return exito;
+  };
+
+  const handleConfirmarEditar = async (productoActualizado) => {
+    const exito = await actualizarProducto(productoActualizado);
+    if (exito) {
+      cerrarModal();
+    }
+    return exito;
+  };
+
+  const handleConfirmarEliminar = async (codigoBarra) => {
+    const exito = await eliminarProducto(codigoBarra);
+    if (exito) {
+      cerrarModal();
+    }
+    return exito;
+  };
+
+  // Mostrar loading mientras se autentica
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -116,6 +293,14 @@ const ProductosPage = () => {
       </div>
     );
   }
+
+  // Función para obtener el saludo dinámico
+  const getSaludo = () => {
+    const hora = new Date().getHours();
+    if (hora < 12) return 'Buenos días';
+    if (hora < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -135,7 +320,7 @@ const ProductosPage = () => {
                   Gestión de Productos
                 </h1>
                 <p className="text-gray-600 mt-1">
-                  Administra tu inventario y catálogo de productos
+                  {getSaludo()}, {user?.nombre || user?.username}. Administra tu inventario y catálogo
                 </p>
               </div>
             </div>
@@ -150,187 +335,72 @@ const ProductosPage = () => {
           </div>
         </div>
 
-        {/* Búsqueda y filtros */}
-        <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar productos por nombre, código o categoría..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            
-            <button
-              onClick={cargarProductos}
-              disabled={loading}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Cargando...' : 'Actualizar'}
-            </button>
-          </div>
-        </div>
+        {/* Filtros */}
+        <FiltrosProductos
+          onBuscar={handleBuscar}
+          onLimpiarFiltros={handleLimpiarFiltros}
+          onActualizar={() => handleCargarProductos('')}
+          loading={loading}
+          totalProductos={productosFiltrados.length}
+          estadisticas={estadisticas}
+        />
 
         {/* Tabla de productos */}
-        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-2">Cargando productos...</span>
-            </div>
-          ) : (
-            <>
-              {/* Vista Desktop */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Código
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Producto
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Categoría
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Precio
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Stock
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Estado
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredProductos.map((producto) => {
-                      const stockStatus = getStockStatus(producto.stock);
-                      return (
-                        <tr key={producto.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 text-sm font-mono text-gray-600">
-                            {producto.codigo_barra}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="font-medium text-gray-900">{producto.nombre}</div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">
-                            {producto.categoria}
-                          </td>
-                          <td className="px-6 py-4 text-right text-sm font-semibold text-green-600">
-                            ${producto.precio.toFixed(2)}
-                          </td>
-                          <td className="px-6 py-4 text-center text-sm font-semibold">
-                            {producto.stock}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${stockStatus.color}`}>
-                              {stockStatus.text}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <div className="flex justify-center space-x-2">
-                              <button
-                                onClick={() => handleEditarProducto(producto)}
-                                className="text-blue-600 hover:text-blue-800 p-1"
-                                title="Editar producto"
-                              >
-                                <PencilIcon className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleEliminarProducto(producto)}
-                                className="text-red-600 hover:text-red-800 p-1"
-                                title="Eliminar producto"
-                              >
-                                <TrashIcon className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Vista Móvil */}
-              <div className="md:hidden divide-y divide-gray-200">
-                {filteredProductos.map((producto) => {
-                  const stockStatus = getStockStatus(producto.stock);
-                  return (
-                    <div key={producto.id} className="p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{producto.nombre}</h3>
-                          <p className="text-sm text-gray-500">Código: {producto.codigo_barra}</p>
-                          <p className="text-sm text-gray-500">Categoría: {producto.categoria}</p>
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEditarProducto(producto)}
-                            className="text-blue-600 hover:text-blue-800 p-1"
-                          >
-                            <PencilIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleEliminarProducto(producto)}
-                            className="text-red-600 hover:text-red-800 p-1"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div>
-                          <span className="text-gray-500">Precio:</span>
-                          <div className="font-semibold text-green-600">${producto.precio.toFixed(2)}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Stock:</span>
-                          <div className="font-semibold">{producto.stock}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Estado:</span>
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${stockStatus.color}`}>
-                            {stockStatus.text}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Mensaje cuando no hay productos */}
-              {filteredProductos.length === 0 && !loading && (
-                <div className="text-center py-12">
-                  <CubeIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {searchTerm ? 'No se encontraron productos' : 'No hay productos registrados'}
-                  </h3>
-                  <p className="text-gray-500">
-                    {searchTerm 
-                      ? 'Intenta ajustar tu búsqueda'
-                      : 'Comienza agregando productos a tu inventario'
-                    }
-                  </p>
-                </div>
-              )}
-            </>
-          )}
+        <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-6">
+          <TablaProductos
+            productos={productosPaginados}
+            onEditarProducto={handleEditarProducto}
+            onEliminarProducto={handleEliminarProducto}
+            loading={loading}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+          />
+          
+          {/* Paginación */}
+          <Paginacion
+            datosOriginales={productosFiltrados}
+            paginaActual={paginaActual}
+            registrosPorPagina={registrosPorPagina}
+            totalPaginas={totalPaginas}
+            indexOfPrimero={indexOfPrimero}
+            indexOfUltimo={indexOfUltimo}
+            onCambiarPagina={cambiarPagina}
+            onCambiarRegistrosPorPagina={cambiarRegistrosPorPagina}
+          />
         </div>
       </div>
+
+      {/* ✅ MODALES - Solo uno se muestra a la vez */}
+      {modalState.mostrar && modalState.tipo === 'agregar' && (
+        <ModalAgregarProducto
+          mostrar={true}
+          onClose={cerrarModal}
+          onAgregar={handleConfirmarAgregar}
+          validarProducto={validarProducto}
+        />
+      )}
+
+      {modalState.mostrar && modalState.tipo === 'editar' && modalState.producto && (
+        <ModalEditarProducto
+          producto={modalState.producto}
+          onClose={cerrarModal}
+          onGuardar={handleConfirmarEditar}
+          validarProducto={validarProducto}
+        />
+      )}
+
+      {modalState.mostrar && modalState.tipo === 'eliminar' && modalState.producto && (
+        <ModalEliminarProducto
+          producto={modalState.producto}
+          onClose={cerrarModal}
+          onConfirmar={handleConfirmarEliminar}
+        />
+      )}
     </div>
   );
-};
+}
 
-export default ProductosPage;
+export default function ProductosPage() {
+  return <ProductosContent />;
+}
