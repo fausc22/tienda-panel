@@ -3,6 +3,7 @@ import { AuthProvider } from '../context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/router';
+import Layout from '../components/layout/Layout';
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
@@ -10,8 +11,10 @@ function MyApp({ Component, pageProps }) {
   return (
     <AuthProvider>
       <AnimatePresence mode="wait" initial={false}>
-        <div key={router.route} className="bg-gray-50 min-h-screen">
-          <Component {...pageProps} />
+        <div key={router.route}>
+          <Layout>
+            <Component {...pageProps} />
+          </Layout>
           
           {/* Configuración global de notificaciones */}
           <Toaster
