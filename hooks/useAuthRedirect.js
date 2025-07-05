@@ -26,7 +26,7 @@ export const useAuthRedirect = (requireAuth = false, redirectTo = null) => {
     // Si no requiere auth y está autenticado (ej: página de login)
     if (!requireAuth && isAuthenticated) {
       hasRedirected.current = true;
-      const destination = redirectTo || '/admin/dashboard';
+      const destination = redirectTo || '/inicio';
       router.replace(destination);
       return;
     }
@@ -57,6 +57,6 @@ export const useProtectedPage = () => {
 /**
  * Hook para páginas públicas (como login) que redirigen si ya está autenticado
  */
-export const usePublicPage = (redirectTo = '/admin/dashboard') => {
+export const usePublicPage = (redirectTo = '/inicio') => {
   return useAuthRedirect(false, redirectTo);
 };

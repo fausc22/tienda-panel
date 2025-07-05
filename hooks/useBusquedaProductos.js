@@ -1,4 +1,4 @@
-// hooks/useBusquedaProductos.js - Hook para búsqueda de productos
+// hooks/useBusquedaProductos.js - Hook para búsqueda de productos - VERSIÓN CORREGIDA
 import { useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { axiosAuth } from '../utils/apiClient';
@@ -13,7 +13,14 @@ export const useProductoSearch = () => {
   const buscarProducto = useCallback(async (terminoBusqueda = null) => {
     const termino = terminoBusqueda || busqueda;
     
-    if (!termino || typeof termino !== 'string' || termino.trim().length < 2) {
+    // Validación más específica y con mejor feedback
+    if (!termino || typeof termino !== 'string') {
+      toast.error('Ingrese un término de búsqueda válido');
+      return;
+    }
+
+    const terminoLimpio = termino.trim();
+    if (terminoLimpio.length < 2) {
       toast.error('Ingrese al menos 2 caracteres para buscar');
       return;
     }
@@ -21,16 +28,16 @@ export const useProductoSearch = () => {
     setLoading(true);
     
     try {
-      console.log(`🔍 Buscando productos con término: "${termino}"`);
+      console.log(`🔍 Buscando productos con término: "${terminoLimpio}"`);
       
-      const response = await axiosAuth.get(`/admin/productos?search=${encodeURIComponent(termino.trim())}`);
+      const response = await axiosAuth.get(`/admin/productos?search=${encodeURIComponent(terminoLimpio)}`);
       
       if (response.data && Array.isArray(response.data)) {
         setResultados(response.data);
         console.log(`✅ ${response.data.length} productos encontrados`);
         
         if (response.data.length === 0) {
-          toast.info('No se encontraron productos con ese término');
+          toast.info(`No se encontraron productos con "${terminoLimpio}"`);
         }
       } else {
         console.warn('⚠️ Respuesta inesperada de búsqueda:', response.data);
@@ -163,6 +170,29 @@ export const useProductoSearch = () => {
     return disponible;
   }, []);
 
+  // Función mejorada para manejar cambios en el input de búsqueda
+  const handleBusquedaChange = useCallback((valor) => {
+    setBusqueda(valor);
+    
+    // Si se limpia completamente, limpiar también los resultados
+    if (!valor || valor.trim().length === 0) {
+      setResultados([]);
+      setProductoSeleccionado(null);
+    }
+  }, []);
+
+  // Función para buscar automáticamente cuando hay suficientes caracteres
+  const buscarAutomatico = useCallback(async (valor) => {
+    const terminoLimpio = valor?.trim() || '';
+    
+    if (terminoLimpio.length >= 2) {
+      await buscarProducto(terminoLimpio);
+    } else if (terminoLimpio.length === 0) {
+      setResultados([]);
+      setProductoSeleccionado(null);
+    }
+  }, [buscarProducto]);
+
   return {
     // Estados
     busqueda,
@@ -171,7 +201,7 @@ export const useProductoSearch = () => {
     loading,
     
     // Funciones de control
-    setBusqueda,
+    setBusqueda: handleBusquedaChange,
     buscarProducto,
     seleccionarProducto,
     limpiarSeleccion,
@@ -180,6 +210,7 @@ export const useProductoSearch = () => {
     // Funciones especializadas
     buscarPorCodigo,
     obtenerDetallesProducto,
-    validarStock
+    validarStock,
+    buscarAutomatico
   };
 };

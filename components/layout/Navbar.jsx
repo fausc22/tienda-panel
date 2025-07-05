@@ -70,12 +70,6 @@ const Navbar = () => {
       href: '/estadisticas',
       icon: ChartBarIcon,
       description: 'Reportes y métricas'
-    },
-    {
-      name: 'Ajustes',
-      href: '/ajustes',
-      icon: CogIcon,
-      description: 'Configuración general'
     }
   ];
 
