@@ -9,19 +9,22 @@ export const useProductoSearch = () => {
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Función para buscar productos
+  // Función para buscar productos - CORREGIDA
   const buscarProducto = useCallback(async (terminoBusqueda = null) => {
-    const termino = terminoBusqueda || busqueda;
+    // Usar el parámetro o el estado interno
+    const termino = terminoBusqueda !== null ? terminoBusqueda : busqueda;
     
-    // Validación más específica y con mejor feedback
-    if (!termino || typeof termino !== 'string') {
-      toast.error('Ingrese un término de búsqueda válido');
+    // Validación mejorada
+    if (!termino || typeof termino !== 'string' || termino.trim().length === 0) {
+      toast.error('Ingrese un término de búsqueda');
+      setResultados([]);
       return;
     }
 
     const terminoLimpio = termino.trim();
     if (terminoLimpio.length < 2) {
       toast.error('Ingrese al menos 2 caracteres para buscar');
+      setResultados([]);
       return;
     }
 
@@ -193,6 +196,15 @@ export const useProductoSearch = () => {
     }
   }, [buscarProducto]);
 
+  // Función para resetear completamente el hook
+  const resetearBusqueda = useCallback(() => {
+    console.log('🔄 Reseteando búsqueda completa');
+    setBusqueda('');
+    setResultados([]);
+    setProductoSeleccionado(null);
+    setLoading(false);
+  }, []);
+
   return {
     // Estados
     busqueda,
@@ -206,6 +218,7 @@ export const useProductoSearch = () => {
     seleccionarProducto,
     limpiarSeleccion,
     limpiarResultados,
+    resetearBusqueda,
     
     // Funciones especializadas
     buscarPorCodigo,

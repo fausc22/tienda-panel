@@ -1,5 +1,5 @@
-// pages/inicio.jsx - Página principal con gestión de pedidos - VERSIÓN CORREGIDA
-import { useState, useEffect, useMemo } from 'react';
+// pages/inicio.jsx - Página principal con gestión completa de pedidos
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Head from 'next/head';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -16,7 +16,10 @@ import {
   ModalDetallePedidoInicio, 
   ModalEditarProductoPedido, 
   ModalEliminarProductoPedido, 
-  ModalAgregarProductoPedido 
+  ModalAgregarProductoPedido,
+  ModalConfirmarPedido,
+  ModalEnviarPedido,
+  ModalAnularPedido
 } from '../components/inicio/ModalesInicio';
 
 function InicioContent() {
@@ -24,11 +27,14 @@ function InicioContent() {
   const { isLoading: authLoading } = useProtectedPage();
   const { user } = useAuth();
 
-  // Estados para modales
+  // Estados para modales - CORREGIDOS
   const [mostrarModalDetalle, setMostrarModalDetalle] = useState(false);
   const [mostrarModalAgregarProducto, setMostrarModalAgregarProducto] = useState(false);
   const [mostrarModalEditarProducto, setMostrarModalEditarProducto] = useState(false);
   const [mostrarModalEliminarProducto, setMostrarModalEliminarProducto] = useState(false);
+  const [mostrarModalConfirmarPedido, setMostrarModalConfirmarPedido] = useState(false);
+  const [mostrarModalEnviarPedido, setMostrarModalEnviarPedido] = useState(false);
+  const [mostrarModalAnularPedido, setMostrarModalAnularPedido] = useState(false);
   
   // Estados para productos en edición
   const [productoEditando, setProductoEditando] = useState(null);
@@ -58,7 +64,12 @@ function InicioContent() {
     agregarProducto,
     eliminarProducto,
     actualizarProducto,
-    verificarStock, 
+    verificarStock,
+    confirmarPedido,
+    enviarPedido,
+    anularPedido,
+    enviarEmailConfirmado,
+    enviarEmailEnCamino,
     cerrarEdicion
   } = useEditarPedido();
 
@@ -118,11 +129,32 @@ function InicioContent() {
     }
   }, [user, authLoading, cargarPedidos]);
 
-  // HANDLERS para eventos de la tabla
+  // Función para cerrar TODOS los modales
+  const cerrarTodosLosModales = useCallback(() => {
+    setMostrarModalDetalle(false);
+    setMostrarModalAgregarProducto(false);
+    setMostrarModalEditarProducto(false);
+    setMostrarModalEliminarProducto(false);
+    setMostrarModalConfirmarPedido(false);
+    setMostrarModalEnviarPedido(false);
+    setMostrarModalAnularPedido(false);
+    setProductoEditando(null);
+    setProductoEliminando(null);
+  }, []);
+
+  // HANDLERS para eventos de la tabla - CORREGIDOS
   const handleRowDoubleClick = async (pedido) => {
     try {
+      // Primero cerrar todos los modales
+      cerrarTodosLosModales();
+      
+      // Luego cargar datos y abrir modal
       await cargarProductosPedido(pedido);
-      setMostrarModalDetalle(true);
+      
+      // Usar setTimeout para asegurar que los estados se actualicen
+      setTimeout(() => {
+        setMostrarModalDetalle(true);
+      }, 100);
     } catch (error) {
       toast.error('Error al cargar detalles del pedido');
     }
@@ -133,10 +165,10 @@ function InicioContent() {
     cerrarEdicion();
   };
 
-  // HANDLERS para productos
+  // HANDLERS para productos - CORREGIDOS
   const handleAgregarProducto = () => {
     setMostrarModalDetalle(false);
-    setTimeout(() => setMostrarModalAgregarProducto(true), 300);
+    setMostrarModalAgregarProducto(true);
   };
 
   const handleEditarProducto = async (producto) => {
@@ -152,42 +184,42 @@ function InicioContent() {
       
       setProductoEditando(productoConStock);
       setMostrarModalDetalle(false);
-      setTimeout(() => setMostrarModalEditarProducto(true), 300);
+      setMostrarModalEditarProducto(true);
     } catch (error) {
       console.error('❌ Error al obtener stock:', error);
       toast.error('Error al consultar stock del producto');
       // Continuar con stock 0 para no bloquear la edición
       setProductoEditando({ ...producto, stock_actual: 0 });
       setMostrarModalDetalle(false);
-      setTimeout(() => setMostrarModalEditarProducto(true), 300);
+      setMostrarModalEditarProducto(true);
     }
   };
 
   const handleEliminarProducto = (producto) => {
     setProductoEliminando(producto);
     setMostrarModalDetalle(false);
-    setTimeout(() => setMostrarModalEliminarProducto(true), 300);
+    setMostrarModalEliminarProducto(true);
   };
 
-  // HANDLERS para modales de productos
+  // HANDLERS para modales de productos - CORREGIDOS
   const handleCloseModalAgregarProducto = () => {
     setMostrarModalAgregarProducto(false);
-    setTimeout(() => setMostrarModalDetalle(true), 300);
+    setMostrarModalDetalle(true);
   };
 
   const handleCloseModalEditarProducto = () => {
     setMostrarModalEditarProducto(false);
     setProductoEditando(null);
-    setTimeout(() => setMostrarModalDetalle(true), 300);
+    setMostrarModalDetalle(true);
   };
 
   const handleCloseModalEliminarProducto = () => {
     setMostrarModalEliminarProducto(false);
     setProductoEliminando(null);
-    setTimeout(() => setMostrarModalDetalle(true), 300);
+    setMostrarModalDetalle(true);
   };
 
-  // HANDLERS para confirmación de acciones
+  // HANDLERS para confirmación de acciones de productos
   const handleConfirmarAgregarProducto = async (producto, cantidad) => {
     try {
       console.log('🔄 Agregando producto...');
@@ -258,6 +290,105 @@ function InicioContent() {
       console.error('❌ Error en handleConfirmarEliminarProducto:', error);
       toast.error('Error al eliminar producto');
     }
+  };
+
+  // HANDLERS para gestión de estados del pedido - CORREGIDOS
+  const handleConfirmarPedido = () => {
+    setMostrarModalDetalle(false);
+    setMostrarModalConfirmarPedido(true);
+  };
+
+  const handleEnviarPedido = () => {
+    setMostrarModalDetalle(false);
+    setMostrarModalEnviarPedido(true);
+  };
+
+  const handleAnularPedido = () => {
+    setMostrarModalDetalle(false);
+    setMostrarModalAnularPedido(true);
+  };
+
+  // HANDLERS para confirmación de cambios de estado
+  const handleConfirmarConfirmarPedido = async () => {
+    try {
+      console.log('🔄 Confirmando pedido...');
+      
+      const exito = await confirmarPedido();
+      if (exito) {
+        // Enviar email de confirmación
+        await enviarEmailConfirmado();
+        
+        setMostrarModalConfirmarPedido(false);
+        setMostrarModalDetalle(true);
+        
+        // Recargar pedidos para actualizar las tablas
+        await cargarPedidos();
+        
+        toast.success('Pedido confirmado y email enviado');
+      }
+    } catch (error) {
+      console.error('❌ Error confirmando pedido:', error);
+      toast.error('Error al confirmar pedido');
+    }
+  };
+
+  const handleConfirmarEnviarPedido = async (horarioDesde, horarioHasta) => {
+    try {
+      console.log('🔄 Enviando pedido...');
+      
+      const exito = await enviarPedido(horarioDesde, horarioHasta);
+      if (exito) {
+        // Enviar email de pedido en camino
+        await enviarEmailEnCamino(horarioDesde, horarioHasta);
+        
+        setMostrarModalEnviarPedido(false);
+        handleCloseModalDetalle(); // Cerrar modal de detalle ya que el pedido pasó a entregados
+        
+        // Recargar pedidos para actualizar las tablas
+        await cargarPedidos();
+        
+        toast.success('Pedido enviado y email de seguimiento enviado');
+      }
+    } catch (error) {
+      console.error('❌ Error enviando pedido:', error);
+      toast.error('Error al enviar pedido');
+    }
+  };
+
+  const handleConfirmarAnularPedido = async () => {
+    try {
+      console.log('🔄 Anulando pedido...');
+      
+      const exito = await anularPedido();
+      if (exito) {
+        setMostrarModalAnularPedido(false);
+        handleCloseModalDetalle(); // Cerrar modal de detalle
+        
+        // Recargar pedidos para actualizar las tablas
+        await cargarPedidos();
+        
+        toast.success('Pedido anulado correctamente');
+      }
+    } catch (error) {
+      console.error('❌ Error anulando pedido:', error);
+      toast.error('Error al anular pedido');
+    }
+  };
+
+  // HANDLERS para cerrar modales de confirmación - CORREGIDOS
+  const handleCloseModalConfirmarPedido = () => {
+    setMostrarModalConfirmarPedido(false);
+    setMostrarModalDetalle(true);
+  };
+
+  const handleCloseModalEnviarPedido = () => {
+    setMostrarModalEnviarPedido(false);
+    setMostrarModalDetalle(true);
+  };
+
+  const handleCloseModalAnularPedido = () => {
+    setMostrarModalAnularPedido(false);
+    setMostrarModalDetalle(true);
   };
 
   // Mostrar loading mientras se autentica
@@ -376,36 +507,74 @@ function InicioContent() {
         </div>
       </div>
       
-      {/* MODALES */}
-      <ModalDetallePedidoInicio
-        pedido={selectedPedido}
-        productos={productos}
-        loading={loadingProductos}
-        onClose={handleCloseModalDetalle}
-        onAgregarProducto={handleAgregarProducto}
-        onEditarProducto={handleEditarProducto}
-        onEliminarProducto={handleEliminarProducto}
-      />
+      {/* MODALES - SOLO UNO ACTIVO A LA VEZ */}
+      {mostrarModalDetalle && !mostrarModalAgregarProducto && !mostrarModalEditarProducto && 
+       !mostrarModalEliminarProducto && !mostrarModalConfirmarPedido && !mostrarModalEnviarPedido && 
+       !mostrarModalAnularPedido && (
+        <ModalDetallePedidoInicio
+          pedido={selectedPedido}
+          productos={productos}
+          loading={loadingProductos}
+          onClose={handleCloseModalDetalle}
+          onAgregarProducto={handleAgregarProducto}
+          onEditarProducto={handleEditarProducto}
+          onEliminarProducto={handleEliminarProducto}
+          onConfirmarPedido={handleConfirmarPedido}
+          onEnviarPedido={handleEnviarPedido}
+          onAnularPedido={handleAnularPedido}
+        />
+      )}
 
-      <ModalAgregarProductoPedido
-        mostrar={mostrarModalAgregarProducto}
-        onClose={handleCloseModalAgregarProducto}
-        onAgregarProducto={handleConfirmarAgregarProducto}
-        productosActuales={productos}
-      />
+      {mostrarModalAgregarProducto && (
+        <ModalAgregarProductoPedido
+          mostrar={mostrarModalAgregarProducto}
+          onClose={handleCloseModalAgregarProducto}
+          onAgregarProducto={handleConfirmarAgregarProducto}
+          productosActuales={productos}
+        />
+      )}
 
-      <ModalEditarProductoPedido
-        producto={productoEditando}
-        onClose={handleCloseModalEditarProducto}
-        onGuardar={handleConfirmarEditarProducto}
-        onChange={setProductoEditando}
-      />
+      {mostrarModalEditarProducto && productoEditando && (
+        <ModalEditarProductoPedido
+          producto={productoEditando}
+          onClose={handleCloseModalEditarProducto}
+          onGuardar={handleConfirmarEditarProducto}
+          onChange={setProductoEditando}
+        />
+      )}
 
-      <ModalEliminarProductoPedido
-        producto={productoEliminando}
-        onClose={handleCloseModalEliminarProducto}
-        onConfirmar={handleConfirmarEliminarProducto}
-      />
+      {mostrarModalEliminarProducto && productoEliminando && (
+        <ModalEliminarProductoPedido
+          producto={productoEliminando}
+          onClose={handleCloseModalEliminarProducto}
+          onConfirmar={handleConfirmarEliminarProducto}
+        />
+      )}
+
+      {mostrarModalConfirmarPedido && selectedPedido && (
+        <ModalConfirmarPedido
+          pedido={selectedPedido}
+          productos={productos}
+          onClose={handleCloseModalConfirmarPedido}
+          onConfirmar={handleConfirmarConfirmarPedido}
+        />
+      )}
+
+      {mostrarModalEnviarPedido && selectedPedido && (
+        <ModalEnviarPedido
+          pedido={selectedPedido}
+          onClose={handleCloseModalEnviarPedido}
+          onEnviar={handleConfirmarEnviarPedido}
+        />
+      )}
+
+      {mostrarModalAnularPedido && selectedPedido && (
+        <ModalAnularPedido
+          pedido={selectedPedido}
+          onClose={handleCloseModalAnularPedido}
+          onConfirmar={handleConfirmarAnularPedido}
+        />
+      )}
     </div>
   );
 }

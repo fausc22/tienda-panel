@@ -1,4 +1,4 @@
-// components/inicio/ModalesInicio.jsx - Modales para gestión de pedidos en página de inicio
+// components/inicio/ModalesInicio.jsx - Modales corregidos con nuevas funcionalidades
 import { useState, useEffect } from 'react';
 import { MdDeleteForever, MdExpandMore, MdExpandLess, MdSearch } from "react-icons/md";
 import { toast } from 'react-hot-toast';
@@ -19,7 +19,7 @@ const formatearFecha = (fecha) => {
   });
 };
 
-// Modal principal de detalle del pedido
+// Modal principal de detalle del pedido - CORREGIDO
 export function ModalDetallePedidoInicio({ 
   pedido,
   productos,
@@ -27,7 +27,10 @@ export function ModalDetallePedidoInicio({
   onClose,
   onAgregarProducto,
   onEditarProducto,
-  onEliminarProducto
+  onEliminarProducto,
+  onConfirmarPedido,
+  onEnviarPedido,
+  onAnularPedido
 }) {
   const [clienteExpandido, setClienteExpandido] = useState(false);
 
@@ -37,17 +40,19 @@ export function ModalDetallePedidoInicio({
     setClienteExpandido(!clienteExpandido);
   };
 
-  const handleConfirmarPedido = () => {
-    // TODO: Implementar lógica para confirmar pedido
-    toast.info('Función "Confirmar Pedido" - Por implementar');
-    console.log('🔄 Confirmando pedido:', pedido.id_pedido);
-  };
+  // Verificar si el pedido permite modificaciones - CORREGIDO
+  const puedeModificar = pedido.estado === 'pendiente' || pedido.estado === 'En proceso';
+  const estaConfirmado = pedido.estado === 'confirmado';
+  const estaEntregado = pedido.estado === 'entregado';
+  const estaAnulado = pedido.estado === 'Anulado';
 
-  const handleAnularPedido = () => {
-    // TODO: Implementar lógica para anular pedido
-    toast.info('Función "Anular Pedido" - Por implementar');
-    console.log('🔄 Anulando pedido:', pedido.id_pedido);
-  };
+  // Debug para ver el estado actual
+  console.log('Estado del pedido:', pedido.estado, {
+    puedeModificar,
+    estaConfirmado,
+    estaEntregado,
+    estaAnulado
+  });
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-2 sm:p-4">
@@ -86,44 +91,248 @@ export function ModalDetallePedidoInicio({
           <div className="mb-4">
             <h3 className="text-xl font-semibold mb-4 text-gray-800">Productos del Pedido</h3>
             
-            <button
-              onClick={onAgregarProducto}
-              className="mb-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center"
-            >
-              ➕ AGREGAR PRODUCTO
-            </button>
+            {puedeModificar && (
+              <button
+                onClick={onAgregarProducto}
+                className="mb-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center"
+              >
+                ➕ AGREGAR PRODUCTO
+              </button>
+            )}
 
             <TablaProductosInicio
               productos={productos}
-              onEditarProducto={onEditarProducto}
-              onEliminarProducto={onEliminarProducto}
+              onEditarProducto={puedeModificar ? onEditarProducto : null}
+              onEliminarProducto={puedeModificar ? onEliminarProducto : null}
               loading={loading}
+              soloLectura={!puedeModificar}
             />
             
             <ResumenTotalesInicio productos={productos} />
           </div>
 
-          {/* Botones de acción del modal */}
+          {/* Botones de acción del modal - CORREGIDOS */}
           <div className="mt-6 flex flex-col sm:flex-row gap-4">
-            <button 
-              onClick={handleConfirmarPedido}
-              className="bg-green-600 hover:bg-green-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors w-full sm:w-1/3"
-            >
-              ✅ CONFIRMAR PEDIDO
-            </button>
+            {/* Botón CONFIRMAR PEDIDO - Solo si está pendiente o en proceso */}
+            {puedeModificar && (
+              <button 
+                onClick={onConfirmarPedido}
+                className="bg-green-600 hover:bg-green-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex-1"
+              >
+                ✅ CONFIRMAR PEDIDO
+              </button>
+            )}
             
-            <button 
-              onClick={handleAnularPedido}
-              className="bg-red-600 hover:bg-red-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors w-full sm:w-1/3"
-            >
-              ❌ ANULAR PEDIDO
-            </button>
+            {/* Botón ENVIAR PEDIDO - Solo si está confirmado */}
+            {estaConfirmado && (
+              <button 
+                onClick={onEnviarPedido}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex-1"
+              >
+                🚚 ENVIAR PEDIDO
+              </button>
+            )}
             
+            {/* Botón ANULAR PEDIDO - Solo si NO está entregado */}
+            {!estaEntregado && !estaAnulado && (
+              <button 
+                onClick={onAnularPedido}
+                className="bg-red-600 hover:bg-red-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex-1"
+              >
+                ❌ ANULAR PEDIDO
+              </button>
+            )}
+            
+            {/* Botón CERRAR - Siempre disponible */}
             <button 
               onClick={onClose}
-              className="bg-gray-600 hover:bg-gray-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors w-full sm:w-1/3"
+              className="bg-gray-600 hover:bg-gray-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex-1"
             >
               🚪 CERRAR
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal para confirmar pedido - NUEVO
+export function ModalConfirmarPedido({ 
+  pedido, 
+  productos, 
+  onClose, 
+  onConfirmar 
+}) {
+  if (!pedido) return null;
+
+  const totalProductos = productos.reduce((total, producto) => {
+    return total + (parseInt(producto.cantidad) || 0);
+  }, 0);
+
+  const totalMonto = productos.reduce((total, producto) => {
+    return total + (parseFloat(producto.subtotal) || 0);
+  }, 0);
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
+      <div className="bg-white rounded-lg max-w-md w-full">
+        <div className="p-6">
+          <h2 className="text-xl font-bold mb-4 text-center text-gray-800">
+            Confirmar Pedido
+          </h2>
+          
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <p className="text-center text-gray-700 mb-4">
+              ¿Desea confirmar el pedido para <strong>{pedido.cliente}</strong> con una cantidad de <strong>{totalProductos}</strong> artículos y un valor total de <strong>${totalMonto.toFixed(2)}</strong>?
+            </p>
+            <p className="text-center text-red-600 font-semibold text-sm">
+              ⚠️ ESTA ACCIÓN NO SE PUEDE REVERTIR
+            </p>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <button 
+              onClick={onConfirmar}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+            >
+              ✅ SÍ, CONFIRMAR
+            </button>
+            <button 
+              onClick={onClose}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+            >
+              ❌ CANCELAR
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal para enviar pedido con horario - NUEVO
+export function ModalEnviarPedido({ 
+  pedido, 
+  onClose, 
+  onEnviar 
+}) {
+  const [horarioDesde, setHorarioDesde] = useState('');
+  const [horarioHasta, setHorarioHasta] = useState('');
+
+  if (!pedido) return null;
+
+  const handleEnviar = () => {
+    if (!horarioDesde || !horarioHasta) {
+      toast.error('Por favor complete ambos horarios');
+      return;
+    }
+
+    if (horarioDesde >= horarioHasta) {
+      toast.error('El horario desde debe ser menor al horario hasta');
+      return;
+    }
+
+    onEnviar(horarioDesde, horarioHasta);
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
+      <div className="bg-white rounded-lg max-w-md w-full">
+        <div className="p-6">
+          <h2 className="text-xl font-bold mb-4 text-center text-gray-800">
+            Seleccionar Horario de Entrega
+          </h2>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <p className="text-center text-gray-700 mb-4">
+              Pedido para: <strong>{pedido.cliente}</strong>
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Horario desde:
+                </label>
+                <input
+                  type="time"
+                  value={horarioDesde}
+                  onChange={(e) => setHorarioDesde(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Horario hasta:
+                </label>
+                <input
+                  type="time"
+                  value={horarioHasta}
+                  onChange={(e) => setHorarioHasta(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <button 
+              onClick={handleEnviar}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+            >
+              🚚 ENVIAR PEDIDO
+            </button>
+            <button 
+              onClick={onClose}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+            >
+              ❌ CANCELAR
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal para anular pedido - NUEVO
+export function ModalAnularPedido({ 
+  pedido, 
+  onClose, 
+  onConfirmar 
+}) {
+  if (!pedido) return null;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
+      <div className="bg-white rounded-lg max-w-md w-full">
+        <div className="p-6">
+          <h2 className="text-xl font-bold mb-4 text-center text-red-600">
+            Anular Pedido
+          </h2>
+          
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <p className="text-center text-gray-700 mb-4">
+              ¿Está seguro que desea anular el pedido #{pedido.id_pedido} de <strong>{pedido.cliente}</strong>?
+            </p>
+            <p className="text-center text-red-600 font-semibold text-sm">
+              ⚠️ Esta acción cambiará el estado del pedido a "Anulado"
+            </p>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <button 
+              onClick={onConfirmar}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+            >
+              ✅ SÍ, ANULAR
+            </button>
+            <button 
+              onClick={onClose}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+            >
+              ❌ CANCELAR
             </button>
           </div>
         </div>
@@ -186,6 +395,8 @@ function InformacionAdicionalInicio({ pedido }) {
       case 'pendiente':
       case 'En proceso':
         return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'confirmado':
+        return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'entregado':
         return 'bg-green-100 text-green-800 border-green-300';
       case 'Anulado':
@@ -225,8 +436,8 @@ function InformacionAdicionalInicio({ pedido }) {
   );
 }
 
-// Tabla de productos
-function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto, loading }) {
+// Tabla de productos - ACTUALIZADA
+function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto, loading, soloLectura }) {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-32">
@@ -257,7 +468,7 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
               <th className="p-2 text-center">Cant.</th>
               <th className="p-2 text-right">Precio Unit.</th>
               <th className="p-2 text-right">Subtotal</th>
-              <th className="p-2 text-center">Acción</th>
+              {!soloLectura && <th className="p-2 text-center">Acción</th>}
             </tr>
           </thead>
           <tbody>
@@ -268,25 +479,27 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
               
               return (
                 <tr key={producto.id}
-                    className="hover:bg-gray-100 cursor-pointer border-b"
-                    onDoubleClick={() => onEditarProducto(producto)}> 
+                    className={`border-b ${!soloLectura ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
+                    onDoubleClick={!soloLectura ? () => onEditarProducto(producto) : undefined}> 
                   <td className="p-2 font-mono text-xs">{producto.codigo_barra}</td>
                   <td className="p-2 font-medium">{producto.nombre_producto}</td>
                   <td className="p-2 text-center font-semibold">{cantidad}</td>
                   <td className="p-2 text-right">${precio.toFixed(2)}</td>
                   <td className="p-2 text-right font-semibold text-green-600">${subtotal.toFixed(2)}</td>
-                  <td className="p-2 text-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEliminarProducto(producto);
-                      }}
-                      className="bg-red-500 text-white p-1 rounded hover:bg-red-600 transition-colors"
-                      title="Eliminar producto"
-                    >
-                      <MdDeleteForever size={16} />
-                    </button>
-                  </td>
+                  {!soloLectura && (
+                    <td className="p-2 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEliminarProducto(producto);
+                        }}
+                        className="bg-red-500 text-white p-1 rounded hover:bg-red-600 transition-colors"
+                        title="Eliminar producto"
+                      >
+                        <MdDeleteForever size={16} />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -308,13 +521,15 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
                   <h4 className="font-semibold text-gray-800 text-sm">{producto.nombre_producto}</h4>
                   <p className="text-xs text-gray-500">Código: {producto.codigo_barra}</p>
                 </div>
-                <button
-                  className="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded ml-2 transition-colors text-xs"
-                  onClick={() => onEliminarProducto(producto)}
-                  title="Eliminar producto"
-                >
-                  ✕
-                </button>
+                {!soloLectura && (
+                  <button
+                    className="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded ml-2 transition-colors text-xs"
+                    onClick={() => onEliminarProducto(producto)}
+                    title="Eliminar producto"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
               
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -335,12 +550,14 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
                 </div>
               </div>
               
-              <button
-                onClick={() => onEditarProducto(producto)}
-                className="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-xs transition-colors"
-              >
-                Editar
-              </button>
+              {!soloLectura && (
+                <button
+                  onClick={() => onEditarProducto(producto)}
+                  className="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-xs transition-colors"
+                >
+                  Editar
+                </button>
+              )}
             </div>
           );
         })}
@@ -378,7 +595,7 @@ function ResumenTotalesInicio({ productos }) {
   );
 }
 
-// Modal para agregar producto
+// Modal para agregar producto - CORREGIDO
 export function ModalAgregarProductoPedido({ 
   mostrar, 
   onClose, 
@@ -386,9 +603,8 @@ export function ModalAgregarProductoPedido({
   productosActuales = []
 }) {
   const [productQuantity, setProductQuantity] = useState(1);
+  const [busquedaLocal, setBusquedaLocal] = useState(''); // Estado local para búsqueda
   const {
-    busqueda,
-    setBusqueda,
     resultados,
     productoSeleccionado,
     loading,
@@ -406,6 +622,27 @@ export function ModalAgregarProductoPedido({
   const stockDisponible = productoSeleccionado?.stock || 0;
   const stockSuficiente = productQuantity <= stockDisponible;
   const productoEsDuplicado = productoSeleccionado ? productoYaExiste(productoSeleccionado.codigo_barra) : false;
+
+  const handleBuscar = async () => {
+    const termino = busquedaLocal.trim();
+    
+    if (!termino) {
+      toast.error('Ingrese un término de búsqueda');
+      return;
+    }
+
+    if (termino.length < 2) {
+      toast.error('Ingrese al menos 2 caracteres para buscar');
+      return;
+    }
+
+    try {
+      await buscarProducto(termino);
+    } catch (error) {
+      console.error('Error en búsqueda:', error);
+      toast.error('Error al buscar productos');
+    }
+  };
 
   const handleAgregarProducto = async () => {
     if (!productoSeleccionado || productQuantity < 1) {
@@ -428,6 +665,7 @@ export function ModalAgregarProductoPedido({
     const exito = await onAgregarProducto(productoSeleccionado, productQuantity);
     if (exito) {
       setProductQuantity(1);
+      setBusquedaLocal('');
       limpiarSeleccion();
       onClose();
     }
@@ -435,9 +673,18 @@ export function ModalAgregarProductoPedido({
 
   const handleClose = () => {
     setProductQuantity(1);
+    setBusquedaLocal('');
     limpiarSeleccion();
     onClose();
   };
+
+  // Limpiar al cerrar
+  useEffect(() => {
+    if (!mostrar) {
+      setBusquedaLocal('');
+      limpiarSeleccion();
+    }
+  }, [mostrar, limpiarSeleccion]);
 
   if (!mostrar) return null;
 
@@ -453,14 +700,19 @@ export function ModalAgregarProductoPedido({
           <div className="flex items-center gap-2 mb-6">
             <input 
               type="text"
-              className="border p-2 flex-grow rounded"
-              placeholder="Buscar Producto"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              className="border p-2 flex-grow rounded focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Buscar Producto por nombre o código"
+              value={busquedaLocal}
+              onChange={(e) => setBusquedaLocal(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleBuscar();
+                }
+              }}
             />
             <button 
-              onClick={buscarProducto}
-              disabled={loading}
+              onClick={handleBuscar}
+              disabled={loading || !busquedaLocal.trim()}
               className="bg-green-600 hover:bg-green-700 text-white p-2 rounded disabled:opacity-50 transition-colors"
             >
               <MdSearch size={24} />
@@ -496,8 +748,10 @@ export function ModalAgregarProductoPedido({
                     </div>
                   );
                 })
+              ) : busquedaLocal ? (
+                <p className="text-gray-500 text-sm">No se encontraron productos</p>
               ) : (
-                <p className="text-gray-500 text-sm">No hay productos para mostrar</p>
+                <p className="text-gray-500 text-sm">Ingrese un término de búsqueda</p>
               )}
             </div>
             
@@ -598,7 +852,7 @@ export function ModalAgregarProductoPedido({
   );
 }
 
-// Modal para editar producto
+// Modal para editar producto - CORREGIDO con recálculo automático
 export function ModalEditarProductoPedido({ 
   producto, 
   onClose, 
