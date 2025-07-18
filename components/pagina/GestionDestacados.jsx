@@ -191,7 +191,7 @@ export default function GestionDestacados({
           <div className="mt-3 pt-3 border-t border-gray-200">
             <p className="text-sm text-gray-600">
               Mostrando {destacadosFiltrados.length} de {destacados.length} productos
-              {busqueda && <span className="ml-1">• Búsqueda: "{busqueda}"</span>}
+              {busqueda && <span className="ml-1">• Búsqueda: {busqueda}</span>}
               {categoriaFiltro !== 'todas' && <span className="ml-1">• Categoría: {categoriaFiltro}</span>}
             </p>
           </div>

@@ -297,7 +297,7 @@ export default function FiltrosProductos({
             Mostrando <span className="font-semibold">{totalProductos}</span> producto{totalProductos !== 1 ? 's' : ''}
             {searchTerm && (
               <>
-                {' '}para "<span className="font-semibold">{searchTerm}</span>"
+                {' '}para <span className="font-semibold">{searchTerm}</span>
               </>
             )}
           </>

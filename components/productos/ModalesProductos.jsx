@@ -604,7 +604,7 @@ export function ModalEliminarProducto({ producto, onClose, onConfirmar }) {
           </div>
           
           <p className="text-gray-700 mb-4">
-            ¿Estás seguro de que deseas eliminar el producto <strong>"{producto.nombre}"</strong>?
+            ¿Estás seguro de que deseas eliminar el producto <strong>{producto.nombre}</strong>?
           </p>
           
           <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">

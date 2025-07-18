@@ -325,7 +325,7 @@ export function ModalAnularPedido({
               ¿Está seguro que desea anular el pedido #{pedido.id_pedido} de <strong>{pedido.cliente}</strong>?
             </p>
             <p className="text-center text-red-600 font-semibold text-sm">
-              ⚠️ Esta acción cambiará el estado del pedido a "Anulado"
+              ⚠️ Esta acción cambiará el estado del pedido a ANULADO
             </p>
           </div>
           
