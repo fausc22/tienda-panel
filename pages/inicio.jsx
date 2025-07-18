@@ -1,4 +1,4 @@
-// pages/inicio.jsx - Página principal con gestión completa de pedidos
+// pages/inicio.jsx - Página principal con gestión completa de pedidos ACTUALIZADA
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Head from 'next/head';
 import { toast } from 'react-hot-toast';
@@ -27,7 +27,7 @@ function InicioContent() {
   const { isLoading: authLoading } = useProtectedPage();
   const { user } = useAuth();
 
-  // Estados para modales - CORREGIDOS
+  // Estados para modales - ACTUALIZADOS
   const [mostrarModalDetalle, setMostrarModalDetalle] = useState(false);
   const [mostrarModalAgregarProducto, setMostrarModalAgregarProducto] = useState(false);
   const [mostrarModalEditarProducto, setMostrarModalEditarProducto] = useState(false);
@@ -142,7 +142,7 @@ function InicioContent() {
     setProductoEliminando(null);
   }, []);
 
-  // HANDLERS para eventos de la tabla - CORREGIDOS
+  // HANDLERS para eventos de la tabla
   const handleRowDoubleClick = async (pedido) => {
     try {
       // Primero cerrar todos los modales
@@ -165,7 +165,7 @@ function InicioContent() {
     cerrarEdicion();
   };
 
-  // HANDLERS para productos - CORREGIDOS
+  // HANDLERS para productos - NUEVOS Y ACTUALIZADOS
   const handleAgregarProducto = () => {
     setMostrarModalDetalle(false);
     setMostrarModalAgregarProducto(true);
@@ -201,7 +201,7 @@ function InicioContent() {
     setMostrarModalEliminarProducto(true);
   };
 
-  // HANDLERS para modales de productos - CORREGIDOS
+  // HANDLERS para modales de productos
   const handleCloseModalAgregarProducto = () => {
     setMostrarModalAgregarProducto(false);
     setMostrarModalDetalle(true);
@@ -219,7 +219,7 @@ function InicioContent() {
     setMostrarModalDetalle(true);
   };
 
-  // HANDLERS para confirmación de acciones de productos
+  // HANDLERS para confirmación de acciones de productos - ACTUALIZADOS
   const handleConfirmarAgregarProducto = async (producto, cantidad) => {
     try {
       console.log('🔄 Agregando producto...');
@@ -292,7 +292,7 @@ function InicioContent() {
     }
   };
 
-  // HANDLERS para gestión de estados del pedido - CORREGIDOS
+  // HANDLERS para gestión de estados del pedido - NUEVOS
   const handleConfirmarPedido = () => {
     setMostrarModalDetalle(false);
     setMostrarModalConfirmarPedido(true);
@@ -308,7 +308,7 @@ function InicioContent() {
     setMostrarModalAnularPedido(true);
   };
 
-  // HANDLERS para confirmación de cambios de estado
+  // HANDLERS para confirmación de cambios de estado - NUEVOS
   const handleConfirmarConfirmarPedido = async () => {
     try {
       console.log('🔄 Confirmando pedido...');
@@ -375,7 +375,7 @@ function InicioContent() {
     }
   };
 
-  // HANDLERS para cerrar modales de confirmación - CORREGIDOS
+  // HANDLERS para cerrar modales de confirmación - NUEVOS
   const handleCloseModalConfirmarPedido = () => {
     setMostrarModalConfirmarPedido(false);
     setMostrarModalDetalle(true);
@@ -507,7 +507,9 @@ function InicioContent() {
         </div>
       </div>
       
-      {/* MODALES - SOLO UNO ACTIVO A LA VEZ */}
+      {/* MODALES - SISTEMA MEJORADO CON NUEVOS MODALES */}
+      
+      {/* Modal principal de detalle */}
       {mostrarModalDetalle && !mostrarModalAgregarProducto && !mostrarModalEditarProducto && 
        !mostrarModalEliminarProducto && !mostrarModalConfirmarPedido && !mostrarModalEnviarPedido && 
        !mostrarModalAnularPedido && (
@@ -525,6 +527,7 @@ function InicioContent() {
         />
       )}
 
+      {/* Modal agregar producto */}
       {mostrarModalAgregarProducto && (
         <ModalAgregarProductoPedido
           mostrar={mostrarModalAgregarProducto}
@@ -534,6 +537,7 @@ function InicioContent() {
         />
       )}
 
+      {/* Modal editar producto */}
       {mostrarModalEditarProducto && productoEditando && (
         <ModalEditarProductoPedido
           producto={productoEditando}
@@ -543,6 +547,7 @@ function InicioContent() {
         />
       )}
 
+      {/* Modal eliminar producto */}
       {mostrarModalEliminarProducto && productoEliminando && (
         <ModalEliminarProductoPedido
           producto={productoEliminando}
@@ -551,6 +556,9 @@ function InicioContent() {
         />
       )}
 
+      {/* NUEVOS MODALES PARA GESTIÓN DE ESTADOS */}
+      
+      {/* Modal confirmar pedido */}
       {mostrarModalConfirmarPedido && selectedPedido && (
         <ModalConfirmarPedido
           pedido={selectedPedido}
@@ -560,6 +568,7 @@ function InicioContent() {
         />
       )}
 
+      {/* Modal enviar pedido */}
       {mostrarModalEnviarPedido && selectedPedido && (
         <ModalEnviarPedido
           pedido={selectedPedido}
@@ -568,6 +577,7 @@ function InicioContent() {
         />
       )}
 
+      {/* Modal anular pedido */}
       {mostrarModalAnularPedido && selectedPedido && (
         <ModalAnularPedido
           pedido={selectedPedido}

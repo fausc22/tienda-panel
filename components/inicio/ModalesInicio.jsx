@@ -1,6 +1,6 @@
 // components/inicio/ModalesInicio.jsx - Modales corregidos con nuevas funcionalidades
 import { useState, useEffect } from 'react';
-import { MdDeleteForever, MdExpandMore, MdExpandLess, MdSearch } from "react-icons/md";
+import { MdDeleteForever, MdExpandMore, MdExpandLess, MdSearch, MdEdit } from "react-icons/md";
 import { toast } from 'react-hot-toast';
 import { useProductoSearch } from '../../hooks/useBusquedaProductos';
 
@@ -19,7 +19,7 @@ const formatearFecha = (fecha) => {
   });
 };
 
-// Modal principal de detalle del pedido - CORREGIDO
+// Modal principal de detalle del pedido - ACTUALIZADO CON NUEVAS FUNCIONES
 export function ModalDetallePedidoInicio({ 
   pedido,
   productos,
@@ -41,10 +41,15 @@ export function ModalDetallePedidoInicio({
   };
 
   // Verificar si el pedido permite modificaciones - CORREGIDO
-  const puedeModificar = pedido.estado === 'pendiente' || pedido.estado === 'En proceso';
-  const estaConfirmado = pedido.estado === 'confirmado';
-  const estaEntregado = pedido.estado === 'entregado';
-  const estaAnulado = pedido.estado === 'Anulado';
+  const puedeModificar = pedido.estado === 'pendiente' || 
+                      pedido.estado === 'Pendiente' || 
+                      pedido.estado === 'En proceso';
+const estaConfirmado = pedido.estado === 'confirmado' || 
+                      pedido.estado === 'Confirmado';
+const estaEntregado = pedido.estado === 'entregado' || 
+                     pedido.estado === 'Entregado';
+const estaAnulado = pedido.estado === 'Anulado' || 
+                   pedido.estado === 'anulado';
 
   // Debug para ver el estado actual
   console.log('Estado del pedido:', pedido.estado, {
@@ -87,18 +92,21 @@ export function ModalDetallePedidoInicio({
           {/* Información adicional del pedido */}
           <InformacionAdicionalInicio pedido={pedido} />
 
-          {/* Productos del pedido */}
+          {/* Productos del pedido - HEADER ACTUALIZADO */}
           <div className="mb-4">
-            <h3 className="text-xl font-semibold mb-4 text-gray-800">Productos del Pedido</h3>
-            
-            {puedeModificar && (
-              <button
-                onClick={onAgregarProducto}
-                className="mb-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center"
-              >
-                ➕ AGREGAR PRODUCTO
-              </button>
-            )}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-800 mb-2 sm:mb-0">Productos del Pedido</h3>
+              
+              {/* Botón AGREGAR PRODUCTO - NUEVO */}
+              {puedeModificar && (
+                <button
+                  onClick={onAgregarProducto}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center"
+                >
+                  ➕ AGREGAR PRODUCTO
+                </button>
+              )}
+            </div>
 
             <TablaProductosInicio
               productos={productos}
@@ -111,13 +119,13 @@ export function ModalDetallePedidoInicio({
             <ResumenTotalesInicio productos={productos} />
           </div>
 
-          {/* Botones de acción del modal - CORREGIDOS */}
-          <div className="mt-6 flex flex-col sm:flex-row gap-4">
-            {/* Botón CONFIRMAR PEDIDO - Solo si está pendiente o en proceso */}
+          {/* Botones de acción del modal - ACTUALIZADOS */}
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
+            {/* Botón CONFIRMAR PEDIDO - Solo si está pendiente o en proceso - NUEVO */}
             {puedeModificar && (
               <button 
                 onClick={onConfirmarPedido}
-                className="bg-green-600 hover:bg-green-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex-1"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex-1"
               >
                 ✅ CONFIRMAR PEDIDO
               </button>
@@ -127,7 +135,7 @@ export function ModalDetallePedidoInicio({
             {estaConfirmado && (
               <button 
                 onClick={onEnviarPedido}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex-1"
+                className="bg-green-600 hover:bg-green-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex-1"
               >
                 🚚 ENVIAR PEDIDO
               </button>
@@ -436,7 +444,7 @@ function InformacionAdicionalInicio({ pedido }) {
   );
 }
 
-// Tabla de productos - ACTUALIZADA
+// Tabla de productos - ACTUALIZADA CON NUEVAS FUNCIONES
 function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto, loading, soloLectura }) {
   if (loading) {
     return (
@@ -458,7 +466,7 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
 
   return (
     <>
-      {/* Tabla para escritorio */}
+      {/* Tabla para escritorio - ACTUALIZADA */}
       <div className="hidden lg:block overflow-x-auto bg-white rounded shadow">
         <table className="w-full text-sm">
           <thead className="bg-gray-200">
@@ -468,7 +476,8 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
               <th className="p-2 text-center">Cant.</th>
               <th className="p-2 text-right">Precio Unit.</th>
               <th className="p-2 text-right">Subtotal</th>
-              {!soloLectura && <th className="p-2 text-center">Acción</th>}
+              {/* NUEVA COLUMNA ACCIONES */}
+              {!soloLectura && <th className="p-2 text-center">Acciones</th>}
             </tr>
           </thead>
           <tbody>
@@ -479,25 +488,31 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
               
               return (
                 <tr key={producto.id}
-                    className={`border-b ${!soloLectura ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
-                    onDoubleClick={!soloLectura ? () => onEditarProducto(producto) : undefined}> 
+                    className={`border-b ${!soloLectura ? 'hover:bg-gray-100' : ''}`}> 
                   <td className="p-2 font-mono text-xs">{producto.codigo_barra}</td>
                   <td className="p-2 font-medium">{producto.nombre_producto}</td>
                   <td className="p-2 text-center font-semibold">{cantidad}</td>
                   <td className="p-2 text-right">${precio.toFixed(2)}</td>
                   <td className="p-2 text-right font-semibold text-green-600">${subtotal.toFixed(2)}</td>
+                  {/* NUEVA COLUMNA CON BOTONES */}
                   {!soloLectura && (
                     <td className="p-2 text-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEliminarProducto(producto);
-                        }}
-                        className="bg-red-500 text-white p-1 rounded hover:bg-red-600 transition-colors"
-                        title="Eliminar producto"
-                      >
-                        <MdDeleteForever size={16} />
-                      </button>
+                      <div className="flex justify-center space-x-2">
+                        <button
+                          onClick={() => onEditarProducto(producto)}
+                          className="bg-blue-500 text-white p-1 rounded hover:bg-blue-600 transition-colors"
+                          title="Editar producto"
+                        >
+                          <MdEdit size={16} />
+                        </button>
+                        <button
+                          onClick={() => onEliminarProducto(producto)}
+                          className="bg-red-500 text-white p-1 rounded hover:bg-red-600 transition-colors"
+                          title="Eliminar producto"
+                        >
+                          <MdDeleteForever size={16} />
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -507,7 +522,7 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
         </table>
       </div>
 
-      {/* Tarjetas para móvil */}
+      {/* Tarjetas para móvil - ACTUALIZADAS */}
       <div className="lg:hidden space-y-3">
         {productos.map((producto) => {
           const precio = Number(producto.precio) || 0;
@@ -521,14 +536,25 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
                   <h4 className="font-semibold text-gray-800 text-sm">{producto.nombre_producto}</h4>
                   <p className="text-xs text-gray-500">Código: {producto.codigo_barra}</p>
                 </div>
+                
+                {/* BOTONES EN MOBILE - NUEVOS */}
                 {!soloLectura && (
-                  <button
-                    className="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded ml-2 transition-colors text-xs"
-                    onClick={() => onEliminarProducto(producto)}
-                    title="Eliminar producto"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center space-x-2 ml-2">
+                    <button
+                      className="bg-blue-500 hover:bg-blue-600 text-white p-1 rounded transition-colors"
+                      onClick={() => onEditarProducto(producto)}
+                      title="Editar producto"
+                    >
+                      <MdEdit size={14} />
+                    </button>
+                    <button
+                      className="bg-red-500 hover:bg-red-600 text-white p-1 rounded transition-colors"
+                      onClick={() => onEliminarProducto(producto)}
+                      title="Eliminar producto"
+                    >
+                      <MdDeleteForever size={14} />
+                    </button>
+                  </div>
                 )}
               </div>
               
@@ -549,15 +575,6 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
                   <span className="font-semibold text-green-600">${subtotal.toFixed(2)}</span>
                 </div>
               </div>
-              
-              {!soloLectura && (
-                <button
-                  onClick={() => onEditarProducto(producto)}
-                  className="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded text-xs transition-colors"
-                >
-                  Editar
-                </button>
-              )}
             </div>
           );
         })}
@@ -603,7 +620,7 @@ export function ModalAgregarProductoPedido({
   productosActuales = []
 }) {
   const [productQuantity, setProductQuantity] = useState(1);
-  const [busquedaLocal, setBusquedaLocal] = useState(''); // Estado local para búsqueda
+  const [busquedaLocal, setBusquedaLocal] = useState('');
   const {
     resultados,
     productoSeleccionado,
