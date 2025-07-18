@@ -18,18 +18,21 @@ const formatearFecha = (fecha) => {
 // Componente para tabla en escritorio
 function TablaEscritorio({ pedidos, onRowDoubleClick, tipo, sortField, sortDirection, onSort }) {
   const getEstadoStyle = (estado) => {
-    switch (estado) {
-      case 'pendiente':
-      case 'En proceso':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'entregado':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'Anulado':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  switch (estado?.toLowerCase()) {
+    case 'pendiente':
+    case 'en proceso':
+      return 'bg-orange-100 text-orange-800 border-orange-200';
+    case 'entregado':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'confirmado':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    case 'anulado':
+      return 'bg-red-100 text-red-800 border-red-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
 
   const getSortIcon = (field) => {
     if (sortField !== field) return '↕️';
