@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
+import { normalizeRoute, buildAssetPath } from '../utils/pathHelper';
 import Head from 'next/head';
 
 const HomePage = () => {
@@ -10,9 +11,11 @@ const HomePage = () => {
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated) {
-        router.replace('/inicio');
+        console.log('✅ User authenticated, redirecting to /inicio');
+        router.replace(normalizeRoute('/inicio'));
       } else {
-        router.replace('/login');
+        console.log('🔒 User not authenticated, redirecting to /login');
+        router.replace(normalizeRoute('/login'));
       }
     }
   }, [isAuthenticated, isLoading, router]);
@@ -23,7 +26,7 @@ const HomePage = () => {
       <Head>
         <title>Panel Admin - PuntoSur</title>
         <meta name="description" content="Panel de administración de PuntoSur" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href={buildAssetPath('/favicon.ico')} />
       </Head>
 
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">

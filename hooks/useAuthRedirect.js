@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
+import { normalizeRoute } from '../utils/pathHelper';
 
 /**
  * Hook para manejar redirecciones basadas en autenticación
@@ -19,14 +20,16 @@ export const useAuthRedirect = (requireAuth = false, redirectTo = null) => {
     // Si la página requiere auth y no está autenticado
     if (requireAuth && !isAuthenticated) {
       hasRedirected.current = true;
-      router.replace('/login');
+      console.log('🔒 Redirecting to login - no authentication');
+      router.replace(normalizeRoute('/login'));
       return;
     }
 
     // Si no requiere auth y está autenticado (ej: página de login)
     if (!requireAuth && isAuthenticated) {
       hasRedirected.current = true;
-      const destination = redirectTo || '/inicio';
+      const destination = redirectTo ? normalizeRoute(redirectTo) : normalizeRoute('/inicio');
+      console.log(`✅ Redirecting authenticated user to: ${destination}`);
       router.replace(destination);
       return;
     }
@@ -34,7 +37,8 @@ export const useAuthRedirect = (requireAuth = false, redirectTo = null) => {
 
   // Reset flag cuando cambie la ruta
   useEffect(() => {
-    const handleRouteChange = () => {
+    const handleRouteChange = (url) => {
+      console.log(`🔄 Route changed to: ${url}`);
       hasRedirected.current = false;
     };
 
