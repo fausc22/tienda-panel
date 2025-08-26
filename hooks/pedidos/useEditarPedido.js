@@ -137,90 +137,92 @@ export const useEditarPedido = () => {
   // Función para agregar un producto al pedido
   const agregarProducto = useCallback(async (producto, cantidad) => {
     if (!selectedPedido) {
-      toast.error('No hay pedido seleccionado');
-      return false;
+        toast.error('No hay pedido seleccionado');
+        return false;
     }
 
     try {
-      const pedidoId = selectedPedido.id_pedido || selectedPedido.id;
-      console.log(`🔄 Agregando producto al pedido ${pedidoId}:`, {
-        producto: producto.nombre,
-        cantidad
-      });
+        const pedidoId = selectedPedido.id_pedido || selectedPedido.id;
+        console.log(`🔄 Agregando producto al pedido ${pedidoId}:`, {
+            producto: producto.nombre,
+            cantidad
+        });
 
-      const subtotal = (parseFloat(producto.precio) || 0) * parseInt(cantidad);
+        const precio = parseFloat(producto.precio) || 0;
+        const cantidadNum = parseInt(cantidad);
+        const subtotal = precio * cantidadNum;
 
-      const datosProducto = {
-        id_pedido: pedidoId,
-        codigo_barra: producto.codigo_barra,
-        nombre_producto: producto.nombre,
-        cantidad: parseInt(cantidad),
-        precio: parseFloat(producto.precio) || 0,
-        subtotal: subtotal
-      };
+        const datosProducto = {
+            id_pedido: pedidoId,
+            codigo_barra: producto.codigo_barra,
+            nombre_producto: producto.nombre,
+            cantidad: cantidadNum,
+            precio: precio,
+            subtotal: subtotal // ← AGREGAR ESTE CAMPO QUE FALTABA
+        };
 
-      const response = await axiosAuth.post('/admin/agregar-producto', datosProducto);
+        const response = await axiosAuth.post('/admin/agregar-producto', datosProducto);
 
-      if (response.data.success) {
-        console.log(`✅ Producto agregado exitosamente al pedido ${pedidoId}`);
-        
-        // Recargar productos del pedido para reflejar cambios
-        await cargarProductosPedido(selectedPedido);
-        
-        // Sincronizar totales automáticamente
-        await sincronizarTotales();
-        
-        toast.success('Producto agregado al pedido');
-        return true;
-      } else {
-        throw new Error(response.data.message || 'Error al agregar producto');
-      }
+        if (response.data.success) {
+            console.log(`✅ Producto agregado exitosamente al pedido ${pedidoId}`);
+            
+            // RECARGAR INMEDIATAMENTE los productos del pedido
+            await cargarProductosPedido(selectedPedido);
+            
+            toast.success('Producto agregado al pedido');
+            return true;
+        } else {
+            throw new Error(response.data.message || 'Error al agregar producto');
+        }
     } catch (error) {
-      console.error('❌ Error agregando producto al pedido:', error);
-      toast.error('Error al agregar producto al pedido');
-      return false;
+        console.error('❌ Error agregando producto al pedido:', error);
+        toast.error('Error al agregar producto al pedido');
+        return false;
     }
-  }, [selectedPedido, cargarProductosPedido, sincronizarTotales]);
+}, [selectedPedido, cargarProductosPedido]);
 
   // Función para actualizar un producto en el pedido
   const actualizarProducto = useCallback(async (productoActualizado) => {
     if (!selectedPedido || !productoActualizado) {
-      toast.error('Datos insuficientes para actualizar producto');
-      return false;
+        toast.error('Datos insuficientes para actualizar producto');
+        return false;
     }
 
     try {
-      const productoId = productoActualizado.id;
-      console.log(`🔄 Actualizando producto ${productoId}:`, productoActualizado);
+        const productoId = productoActualizado.id;
+        console.log(`🔄 Actualizando producto ${productoId}:`, productoActualizado);
 
-      const datosActualizacion = {
-        nombre_producto: productoActualizado.nombre_producto,
-        cantidad: parseInt(productoActualizado.cantidad),
-        precio: parseFloat(productoActualizado.precio)
-      };
+        // CALCULAR SUBTOTAL ANTES DE ENVIAR
+        const precio = parseFloat(productoActualizado.precio);
+        const cantidad = parseInt(productoActualizado.cantidad);
+        const subtotalCalculado = precio * cantidad;
 
-      const response = await axiosAuth.put(`/admin/actualizar-producto/${productoId}`, datosActualizacion);
+        const datosActualizacion = {
+            nombre_producto: productoActualizado.nombre_producto,
+            cantidad: cantidad,
+            precio: precio,
+            subtotal: subtotalCalculado // ← INCLUIR SUBTOTAL
+        };
 
-      if (response.data.success) {
-        console.log(`✅ Producto ${productoId} actualizado exitosamente`);
-        
-        // Recargar productos del pedido para reflejar cambios
-        await cargarProductosPedido(selectedPedido);
-        
-        // Sincronizar totales automáticamente
-        await sincronizarTotales();
-        
-        toast.success('Producto actualizado correctamente');
-        return true;
-      } else {
-        throw new Error(response.data.message || 'Error al actualizar producto');
-      }
+        const response = await axiosAuth.put(`/admin/actualizar-producto/${productoId}`, datosActualizacion);
+
+        if (response.data.success) {
+            console.log(`✅ Producto ${productoId} actualizado exitosamente`);
+            
+            // Recargar productos del pedido
+            await cargarProductosPedido(selectedPedido);
+            
+            toast.success('Producto actualizado correctamente');
+            return true;
+        } else {
+            throw new Error(response.data.message || 'Error al actualizar producto');
+        }
     } catch (error) {
-      console.error('❌ Error actualizando producto:', error);
-      toast.error('Error al actualizar producto');
-      return false;
+        console.error('❌ Error actualizando producto:', error);
+        toast.error('Error al actualizar producto');
+        return false;
     }
-  }, [selectedPedido, cargarProductosPedido, sincronizarTotales]);
+}, [selectedPedido, cargarProductosPedido]);
 
   // Función para eliminar un producto del pedido
   const eliminarProducto = useCallback(async (producto) => {

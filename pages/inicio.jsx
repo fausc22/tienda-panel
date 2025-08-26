@@ -1,4 +1,4 @@
-// pages/inicio.jsx - Página principal con gestión completa de pedidos ACTUALIZADA
+// pages/inicio.jsx - Página principal con gestión completa de pedidos ACTUALIZADA CON MP3
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Head from 'next/head';
 import { toast } from 'react-hot-toast';
@@ -21,6 +21,9 @@ import {
   ModalEnviarPedido,
   ModalAnularPedido
 } from '../components/inicio/ModalesInicio';
+
+import { useNotificacionesPedidos } from '../hooks/pedidos/useNotificacionPedidos';
+import { NotificacionNuevoPedido } from '../components/inicio/NotificacionNuevoPedido';
 
 function InicioContent() {
   // Hook de autenticación y protección
@@ -72,6 +75,21 @@ function InicioContent() {
     enviarEmailEnCamino,
     cerrarEdicion
   } = useEditarPedido();
+
+  // Hook de notificaciones con audio MP3 ← ACTUALIZADO
+  const {
+    ultimoCheckeo,
+    nuevoPedido,
+    mostrarNotificacion,
+    sonidoHabilitado,
+    audioListo,
+    iniciarMonitoreo,
+    detenerMonitoreo,
+    cerrarNotificacion, // ← Ahora recarga automáticamente la página
+    toggleSonido,
+    probarSonido,
+    detenerSonido // ← Nueva función
+  } = useNotificacionesPedidos();
 
   // Cálculos de paginación para pedidos pendientes
   const totalPaginasPendientes = useMemo(() => {
@@ -129,6 +147,34 @@ function InicioContent() {
     }
   }, [user, authLoading, cargarPedidos]);
 
+  // Inicializar monitoreo de pedidos con MP3 ← ACTUALIZADO
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log('🔄 Iniciando monitoreo de nuevos pedidos con audio MP3');
+      console.log('🎵 Estado del audio:', { sonidoHabilitado, audioListo });
+      
+      // Iniciar monitoreo cada 15 segundos
+      iniciarMonitoreo(15000);
+      
+      // Limpiar al desmontar
+      return () => {
+        console.log('🧹 Limpiando monitoreo y deteniendo audio...');
+        detenerMonitoreo();
+      };
+    }
+  }, [user, authLoading, iniciarMonitoreo, detenerMonitoreo, sonidoHabilitado, audioListo]);
+
+  // Handler para ver pedido desde notificación ← YA NO NECESARIO porque ahora recarga automáticamente
+  const handleVerPedidoDesdeNotificacion = async (pedido) => {
+    try {
+      console.log('👁️ Abriendo pedido desde notificación:', pedido.id_pedido);
+      // La función cerrarNotificacion() se encargará de recargar la página
+    } catch (error) {
+      console.error('❌ Error:', error);
+      toast.error('Error al procesar pedido');
+    }
+  };
+
   // Función para cerrar TODOS los modales
   const cerrarTodosLosModales = useCallback(() => {
     setMostrarModalDetalle(false);
@@ -165,7 +211,7 @@ function InicioContent() {
     cerrarEdicion();
   };
 
-  // HANDLERS para productos - NUEVOS Y ACTUALIZADOS
+  // HANDLERS para productos
   const handleAgregarProducto = () => {
     setMostrarModalDetalle(false);
     setMostrarModalAgregarProducto(true);
@@ -222,25 +268,27 @@ function InicioContent() {
   // HANDLERS para confirmación de acciones de productos - ACTUALIZADOS
   const handleConfirmarAgregarProducto = async (producto, cantidad) => {
     try {
-      console.log('🔄 Agregando producto...');
-      
-      const exito = await agregarProducto(producto, cantidad);
-      if (exito) {
-        console.log('✅ Producto agregado exitosamente');
-        handleCloseModalAgregarProducto();
+        console.log('🔄 Agregando producto...');
         
-        // Recargar pedidos para actualizar las tablas
-        console.log('🔄 Recargando pedidos...');
-        await cargarPedidos();
-        console.log('✅ Pedidos actualizados');
-        
-        toast.success('Producto agregado correctamente');
-      }
-      return exito;
+        const exito = await agregarProducto(producto, cantidad);
+        if (exito) {
+            console.log('✅ Producto agregado exitosamente');
+            
+            // CERRAR MODAL PRIMERO
+            handleCloseModalAgregarProducto();
+            
+            // RECARGAR PEDIDOS INMEDIATAMENTE - ESTA ES LA CLAVE
+            console.log('🔄 Recargando pedidos después de agregar producto...');
+            await cargarPedidos();
+            console.log('✅ Pedidos actualizados en tabla');
+            
+            toast.success('Producto agregado y tabla actualizada');
+        }
+        return exito;
     } catch (error) {
-      console.error('❌ Error en handleConfirmarAgregarProducto:', error);
-      toast.error('Error al agregar producto');
-      return false;
+        console.error('❌ Error en handleConfirmarAgregarProducto:', error);
+        toast.error('Error al agregar producto');
+        return false;
     }
   };
 
@@ -248,23 +296,18 @@ function InicioContent() {
     if (!productoEditando) return;
     
     try {
-      console.log('🔄 Editando producto...');
-      
-      const exito = await actualizarProducto(productoEditando);
-      if (exito) {
-        console.log('✅ Producto editado exitosamente');
-        handleCloseModalEditarProducto();
-        
-        // Recargar pedidos para actualizar las tablas
-        console.log('🔄 Recargando pedidos...');
-        await cargarPedidos();
-        console.log('✅ Pedidos actualizados');
-        
-        toast.success('Producto editado correctamente');
-      }
+        const exito = await actualizarProducto(productoEditando);
+        if (exito) {
+            handleCloseModalEditarProducto();
+            
+            // RECARGAR INMEDIATAMENTE
+            await cargarPedidos();
+            
+            toast.success('Producto editado y tabla actualizada');
+        }
     } catch (error) {
-      console.error('❌ Error en handleConfirmarEditarProducto:', error);
-      toast.error('Error al editar producto');
+        console.error('❌ Error editando producto:', error);
+        toast.error('Error al editar producto');
     }
   };
 
@@ -272,23 +315,18 @@ function InicioContent() {
     if (!productoEliminando) return;
     
     try {
-      console.log('🔄 Eliminando producto...');
-      
-      const exito = await eliminarProducto(productoEliminando);
-      if (exito) {
-        console.log('✅ Producto eliminado exitosamente');
-        handleCloseModalEliminarProducto();
-        
-        // Recargar pedidos para actualizar las tablas
-        console.log('🔄 Recargando pedidos...');
-        await cargarPedidos();
-        console.log('✅ Pedidos actualizados');
-        
-        toast.success('Producto eliminado correctamente');
-      }
+        const exito = await eliminarProducto(productoEliminando);
+        if (exito) {
+            handleCloseModalEliminarProducto();
+            
+            // RECARGAR INMEDIATAMENTE  
+            await cargarPedidos();
+            
+            toast.success('Producto eliminado y tabla actualizada');
+        }
     } catch (error) {
-      console.error('❌ Error en handleConfirmarEliminarProducto:', error);
-      toast.error('Error al eliminar producto');
+        console.error('❌ Error eliminando producto:', error);
+        toast.error('Error al eliminar producto');
     }
   };
 
@@ -419,7 +457,6 @@ function InicioContent() {
       </Head>
       
       <div className="max-w-7xl mx-auto">
-        {/* HEADER */}
         <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
             <div>
@@ -429,6 +466,15 @@ function InicioContent() {
               <p className="text-gray-600 mt-1">
                 Panel de administración - PuntoSur
               </p>
+            </div>
+            
+            {/* SOLO TIMESTAMP DEL ÚLTIMO CHEQUEO */}
+            <div className="flex items-center mt-4 sm:mt-0">
+              {ultimoCheckeo && (
+                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-lg">
+                  📡 Último chequeo: {ultimoCheckeo.toLocaleTimeString()}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -507,7 +553,7 @@ function InicioContent() {
         </div>
       </div>
       
-      {/* MODALES - SISTEMA MEJORADO CON NUEVOS MODALES */}
+      {/* MODALES - SISTEMA MEJORADO */}
       
       {/* Modal principal de detalle */}
       {mostrarModalDetalle && !mostrarModalAgregarProducto && !mostrarModalEditarProducto && 
@@ -556,7 +602,7 @@ function InicioContent() {
         />
       )}
 
-      {/* NUEVOS MODALES PARA GESTIÓN DE ESTADOS */}
+      {/* MODALES PARA GESTIÓN DE ESTADOS */}
       
       {/* Modal confirmar pedido */}
       {mostrarModalConfirmarPedido && selectedPedido && (
@@ -585,6 +631,15 @@ function InicioContent() {
           onConfirmar={handleConfirmarAnularPedido}
         />
       )}
+
+      {/* NOTIFICACIÓN DE NUEVO PEDIDO CON MP3 ← ACTUALIZADO */}
+      <NotificacionNuevoPedido
+        mostrar={mostrarNotificacion}
+        pedido={nuevoPedido}
+        onCerrar={cerrarNotificacion} // ← Ahora recarga automáticamente
+        onVerPedido={handleVerPedidoDesdeNotificacion}
+        detenerSonido={detenerSonido} // ← Nueva prop
+      />
     </div>
   );
 }
