@@ -350,44 +350,69 @@ export function ModalAnularPedido({
 }
 
 // Componente de información del cliente
-function InformacionClienteInicio({ pedido, expandido, onToggleExpansion }) {
+function InformacionClienteInicio({ pedido }) {
   return (
-    <div className="bg-blue-50 rounded-lg overflow-hidden mb-4">
-      <div 
-        className="p-3 cursor-pointer hover:bg-blue-100 transition-colors flex items-center justify-between"
-        onClick={onToggleExpansion}
-      >
-        <div>
-          <h3 className="font-bold text-lg text-blue-800">Cliente: {pedido.cliente}</h3>
-          <p className="text-blue-600 text-sm">
-            {pedido.direccion_cliente || 'Dirección no especificada'}
-          </p>
-        </div>
-        <div className="text-blue-600">
-          {expandido ? <MdExpandLess size={24} /> : <MdExpandMore size={24} />}
-        </div>
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+      {/* Header con nombre del cliente */}
+      <div className="mb-3">
+        <h3 className="font-bold text-lg text-blue-800 mb-1">
+          👤 {pedido.cliente}
+        </h3>
+        <p className="text-blue-600 text-sm flex items-center">
+          📍 {pedido.direccion_cliente || 'Dirección no especificada'}
+        </p>
       </div>
       
-      <div className={`transition-all duration-300 ease-in-out ${
-        expandido ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-      } overflow-hidden`}>
-        <div className="px-3 pb-3 border-t border-blue-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mt-3">
+      {/* Grid con información del cliente */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+        {/* Teléfono */}
+        <div className="bg-white rounded-lg p-3 border border-blue-100">
+          <div className="flex items-center space-x-2">
+            <span className="text-blue-600">📞</span>
             <div>
-              <span className="font-medium text-blue-700">Teléfono:</span>
-              <p className="text-gray-700">{pedido.telefono_cliente || 'No especificado'}</p>
+              <span className="font-medium text-gray-600 block text-xs">Teléfono:</span>
+              <span className="text-gray-800 font-medium">
+                {pedido.telefono_cliente || 'No especificado'}
+              </span>
             </div>
+          </div>
+        </div>
+
+        {/* Email */}
+        <div className="bg-white rounded-lg p-3 border border-blue-100">
+          <div className="flex items-center space-x-2">
+            <span className="text-blue-600">✉️</span>
             <div>
-              <span className="font-medium text-blue-700">Email:</span>
-              <p className="text-gray-700">{pedido.email_cliente || 'No especificado'}</p>
+              <span className="font-medium text-gray-600 block text-xs">Email:</span>
+              <span className="text-gray-800 font-medium text-xs break-all">
+                {pedido.email_cliente || 'No especificado'}
+              </span>
             </div>
+          </div>
+        </div>
+
+        {/* Medio de pago */}
+        <div className="bg-white rounded-lg p-3 border border-blue-100">
+          <div className="flex items-center space-x-2">
+            <span className="text-blue-600">💳</span>
             <div>
-              <span className="font-medium text-blue-700">Medio de pago:</span>
-              <p className="text-gray-700">{pedido.medio_pago || 'No especificado'}</p>
+              <span className="font-medium text-gray-600 block text-xs">Medio de pago:</span>
+              <span className="text-gray-800 font-medium">
+                {pedido.medio_pago || 'No especificado'}
+              </span>
             </div>
+          </div>
+        </div>
+
+        {/* Costo envío */}
+        <div className="bg-white rounded-lg p-3 border border-blue-100">
+          <div className="flex items-center space-x-2">
+            <span className="text-blue-600">🚚</span>
             <div>
-              <span className="font-medium text-blue-700">Costo envío:</span>
-              <p className="text-gray-700">${Number(pedido.costo_envio || 0).toFixed(2)}</p>
+              <span className="font-medium text-gray-600 block text-xs">Costo envío:</span>
+              <span className="text-green-600 font-bold">
+                ${Number(pedido.costo_envio || 0).toFixed(2)}
+              </span>
             </div>
           </div>
         </div>
@@ -466,17 +491,17 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
 
   return (
     <>
-      {/* Tabla para escritorio - ACTUALIZADA */}
+      {/* Tabla para escritorio - ACTUALIZADA CON NUEVA COLUMNA */}
       <div className="hidden lg:block overflow-x-auto bg-white rounded shadow">
         <table className="w-full text-sm">
           <thead className="bg-gray-200">
             <tr>
-              <th className="p-2 text-left">Código</th>
+              <th className="p-2 text-left">Cod. Barra</th>
+              <th className="p-2 text-left">Cod. Interno</th>
               <th className="p-2 text-left">Nombre</th>
               <th className="p-2 text-center">Cant.</th>
               <th className="p-2 text-right">Precio Unit.</th>
               <th className="p-2 text-right">Subtotal</th>
-              {/* NUEVA COLUMNA ACCIONES */}
               {!soloLectura && <th className="p-2 text-center">Acciones</th>}
             </tr>
           </thead>
@@ -490,11 +515,13 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
                 <tr key={producto.id}
                     className={`border-b ${!soloLectura ? 'hover:bg-gray-100' : ''}`}> 
                   <td className="p-2 font-mono text-xs">{producto.codigo_barra}</td>
+                  <td className="p-2 text-center font-mono text-xs text-blue-600">
+                    {producto.cod_interno || '-'}
+                  </td>
                   <td className="p-2 font-medium">{producto.nombre_producto}</td>
                   <td className="p-2 text-center font-semibold">{cantidad}</td>
                   <td className="p-2 text-right">${precio.toFixed(2)}</td>
                   <td className="p-2 text-right font-semibold text-green-600">${subtotal.toFixed(2)}</td>
-                  {/* NUEVA COLUMNA CON BOTONES */}
                   {!soloLectura && (
                     <td className="p-2 text-center">
                       <div className="flex justify-center space-x-2">
@@ -522,8 +549,69 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
         </table>
       </div>
 
-      {/* Tarjetas para móvil - ACTUALIZADAS */}
-      <div className="lg:hidden space-y-3">
+      {/* Tabla para tablet - NUEVA VERSIÓN INTERMEDIA */}
+      <div className="hidden md:block lg:hidden overflow-x-auto bg-white rounded shadow">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-200">
+            <tr>
+              <th className="p-2 text-left">Códigos</th>
+              <th className="p-2 text-left">Producto</th>
+              <th className="p-2 text-center">Cant.</th>
+              <th className="p-2 text-right">Precio</th>
+              <th className="p-2 text-right">Subtotal</th>
+              {!soloLectura && <th className="p-2 text-center">Acciones</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {productos.map((producto) => {
+              const precio = Number(producto.precio) || 0;
+              const cantidad = Number(producto.cantidad) || 0;
+              const subtotal = Number(producto.subtotal) || (cantidad * precio);
+              
+              return (
+                <tr key={producto.id}
+                    className={`border-b ${!soloLectura ? 'hover:bg-gray-100' : ''}`}> 
+                  <td className="p-2">
+                    <div className="text-xs font-mono">
+                      <div>Barra: {producto.codigo_barra}</div>
+                      <div className="text-blue-600">
+                        Interno: {producto.cod_interno || '-'}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-2 font-medium">{producto.nombre_producto}</td>
+                  <td className="p-2 text-center font-semibold">{cantidad}</td>
+                  <td className="p-2 text-right">${precio.toFixed(2)}</td>
+                  <td className="p-2 text-right font-semibold text-green-600">${subtotal.toFixed(2)}</td>
+                  {!soloLectura && (
+                    <td className="p-2 text-center">
+                      <div className="flex justify-center space-x-1">
+                        <button
+                          onClick={() => onEditarProducto(producto)}
+                          className="bg-blue-500 text-white p-1 rounded hover:bg-blue-600 transition-colors"
+                          title="Editar"
+                        >
+                          <MdEdit size={14} />
+                        </button>
+                        <button
+                          onClick={() => onEliminarProducto(producto)}
+                          className="bg-red-500 text-white p-1 rounded hover:bg-red-600 transition-colors"
+                          title="Eliminar"
+                        >
+                          <MdDeleteForever size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Tarjetas para móvil - ACTUALIZADAS CON CÓDIGO INTERNO */}
+      <div className="md:hidden space-y-3">
         {productos.map((producto) => {
           const precio = Number(producto.precio) || 0;
           const cantidad = Number(producto.cantidad) || 0;
@@ -531,13 +619,26 @@ function TablaProductosInicio({ productos, onEditarProducto, onEliminarProducto,
           
           return (
             <div key={producto.id} className="bg-white p-3 rounded shadow border">
-              <div className="flex justify-between items-start mb-2">
+              <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-800 text-sm">{producto.nombre_producto}</h4>
-                  <p className="text-xs text-gray-500">Código: {producto.codigo_barra}</p>
+                  <h4 className="font-semibold text-gray-800 text-sm mb-1">
+                    {producto.nombre_producto}
+                  </h4>
+                  {/* Códigos en móvil */}
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <div>
+                      <span className="font-medium">Cod. Barra:</span> {producto.codigo_barra}
+                    </div>
+                    <div>
+                      <span className="font-medium">Cod. Interno:</span> 
+                      <span className="text-blue-600 ml-1">
+                        {producto.cod_interno || 'No asignado'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 
-                {/* BOTONES EN MOBILE - NUEVOS */}
+                {/* BOTONES EN MOBILE */}
                 {!soloLectura && (
                   <div className="flex items-center space-x-2 ml-2">
                     <button

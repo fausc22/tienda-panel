@@ -78,18 +78,17 @@ function InicioContent() {
 
   // Hook de notificaciones con audio MP3 ← ACTUALIZADO
   const {
-    ultimoCheckeo,
-    nuevoPedido,
-    mostrarNotificacion,
-    sonidoHabilitado,
-    audioListo,
-    iniciarMonitoreo,
-    detenerMonitoreo,
-    cerrarNotificacion, // ← Ahora recarga automáticamente la página
-    toggleSonido,
-    probarSonido,
-    detenerSonido // ← Nueva función
-  } = useNotificacionesPedidos();
+  ultimoCheckeo,
+  nuevoPedido,
+  mostrarNotificacion,
+  sonidoHabilitado,
+  audioListo,
+  iniciarMonitoreo,
+  detenerMonitoreo,
+  cerrarNotificacion,
+  detenerSonido,
+  habilitarNotificaciones  // ← NUEVA función
+} = useNotificacionesPedidos();
 
   // Cálculos de paginación para pedidos pendientes
   const totalPaginasPendientes = useMemo(() => {
@@ -469,13 +468,40 @@ function InicioContent() {
             </div>
             
             {/* SOLO TIMESTAMP DEL ÚLTIMO CHEQUEO */}
-            <div className="flex items-center mt-4 sm:mt-0">
-              {ultimoCheckeo && (
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-lg">
-                  📡 Último chequeo: {ultimoCheckeo.toLocaleTimeString()}
-                </span>
-              )}
-            </div>
+            <div className="flex items-center space-x-4 mt-4 sm:mt-0">
+            {/* Botón para habilitar audio */}
+            {!sonidoHabilitado && (
+              <button
+                onClick={async () => {
+                  const exito = await habilitarNotificaciones();
+                  if (exito) {
+                    toast.success('🔊 Notificaciones de audio habilitadas');
+                  } else {
+                    toast.error('No se pudo habilitar el audio');
+                  }
+                }}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-2"
+              >
+                <span>🔊</span>
+                <span>Habilitar Audio</span>
+              </button>
+            )}
+
+            {/* Estado del audio */}
+            {sonidoHabilitado && (
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-sm flex items-center space-x-2">
+                <span>✅</span>
+                <span>Audio Habilitado</span>
+              </span>
+            )}
+
+            {/* Timestamp del último chequeo */}
+            {ultimoCheckeo && (
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-lg">
+                📡 {ultimoCheckeo.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
           </div>
         </div>
 

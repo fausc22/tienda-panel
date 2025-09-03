@@ -1,4 +1,4 @@
-// hooks/pedidos/useEditarPedido.js - Hook para edición de pedidos con sincronización automática
+// hooks/pedidos/useEditarPedido.js - Hook CORREGIDO con cod_interno
 import { useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { axiosAuth } from '../../utils/apiClient';
@@ -8,7 +8,7 @@ export const useEditarPedido = () => {
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Función para cargar productos de un pedido - CON DEBUG
+  // Función para cargar productos de un pedido - CON DEBUG Y VERIFICACIÓN DE cod_interno
   const cargarProductosPedido = useCallback(async (pedido) => {
     if (!pedido) {
       console.warn('⚠️ No se proporcionó pedido para cargar productos');
@@ -16,15 +16,6 @@ export const useEditarPedido = () => {
     }
 
     setLoading(true);
-    
-    // Debug del pedido recibido
-    console.log('🔍 Pedido recibido para cargar productos:', {
-      id: pedido.id_pedido || pedido.id,
-      estado: pedido.estado,
-      cliente: pedido.cliente,
-      pedidoCompleto: pedido
-    });
-    
     setSelectedPedido(pedido);
     
     try {
@@ -34,6 +25,19 @@ export const useEditarPedido = () => {
       const response = await axiosAuth.get(`/admin/pedidos-productos/${pedidoId}`);
       
       if (response.data && Array.isArray(response.data)) {
+        // DEBUG: Verificar qué datos llegan
+        console.log('🔍 Productos recibidos del backend:', response.data);
+        
+        // Verificar cod_interno en cada producto
+        response.data.forEach((producto, index) => {
+          console.log(`📦 Producto ${index}:`, {
+            id: producto.id,
+            codigo_barra: producto.codigo_barra,
+            cod_interno: producto.cod_interno, // ← VERIFICAR ESTE CAMPO
+            nombre_producto: producto.nombre_producto
+          });
+        });
+        
         setProductos(response.data);
         console.log(`✅ ${response.data.length} productos cargados para pedido ${pedidoId}`);
       } else {
@@ -92,7 +96,7 @@ export const useEditarPedido = () => {
 
     return {
       subtotal: subtotal,
-      total: subtotal, // En este caso el total es igual al subtotal
+      total: subtotal,
       cantidadProductos: cantidadProductos
     };
   }, [productos]);
@@ -116,7 +120,6 @@ export const useEditarPedido = () => {
       if (response.data.success) {
         console.log(`✅ Totales sincronizados para pedido ${pedidoId}`);
         
-        // Actualizar el pedido seleccionado con los nuevos totales
         setSelectedPedido(prev => ({
           ...prev,
           monto_total: totales.total,
@@ -134,7 +137,7 @@ export const useEditarPedido = () => {
     }
   }, [selectedPedido, calcularTotales]);
 
-  // Función para agregar un producto al pedido
+  // Función para agregar un producto al pedido - CORREGIDA PARA INCLUIR cod_interno
   const agregarProducto = useCallback(async (producto, cantidad) => {
     if (!selectedPedido) {
         toast.error('No hay pedido seleccionado');
@@ -144,8 +147,10 @@ export const useEditarPedido = () => {
     try {
         const pedidoId = selectedPedido.id_pedido || selectedPedido.id;
         console.log(`🔄 Agregando producto al pedido ${pedidoId}:`, {
+            codigo_barra: producto.codigo_barra,
             producto: producto.nombre,
-            cantidad
+            cantidad,
+            cod_interno: producto.cod_interno || 'No disponible' // ← DEBUG
         });
 
         const precio = parseFloat(producto.precio) || 0;
@@ -158,13 +163,15 @@ export const useEditarPedido = () => {
             nombre_producto: producto.nombre,
             cantidad: cantidadNum,
             precio: precio,
-            subtotal: subtotal // ← AGREGAR ESTE CAMPO QUE FALTABA
+            subtotal: subtotal,
+            // El cod_interno se manejará automáticamente en el backend
         };
 
         const response = await axiosAuth.post('/admin/agregar-producto', datosProducto);
 
         if (response.data.success) {
             console.log(`✅ Producto agregado exitosamente al pedido ${pedidoId}`);
+            console.log('🔍 Respuesta del backend:', response.data);
             
             // RECARGAR INMEDIATAMENTE los productos del pedido
             await cargarProductosPedido(selectedPedido);
@@ -179,7 +186,7 @@ export const useEditarPedido = () => {
         toast.error('Error al agregar producto al pedido');
         return false;
     }
-}, [selectedPedido, cargarProductosPedido]);
+  }, [selectedPedido, cargarProductosPedido]);
 
   // Función para actualizar un producto en el pedido
   const actualizarProducto = useCallback(async (productoActualizado) => {
@@ -190,9 +197,11 @@ export const useEditarPedido = () => {
 
     try {
         const productoId = productoActualizado.id;
-        console.log(`🔄 Actualizando producto ${productoId}:`, productoActualizado);
+        console.log(`🔄 Actualizando producto ${productoId}:`, {
+          ...productoActualizado,
+          cod_interno: productoActualizado.cod_interno || 'No disponible' // ← DEBUG
+        });
 
-        // CALCULAR SUBTOTAL ANTES DE ENVIAR
         const precio = parseFloat(productoActualizado.precio);
         const cantidad = parseInt(productoActualizado.cantidad);
         const subtotalCalculado = precio * cantidad;
@@ -201,7 +210,8 @@ export const useEditarPedido = () => {
             nombre_producto: productoActualizado.nombre_producto,
             cantidad: cantidad,
             precio: precio,
-            subtotal: subtotalCalculado // ← INCLUIR SUBTOTAL
+            subtotal: subtotalCalculado
+            // El cod_interno no se actualiza, se mantiene el original
         };
 
         const response = await axiosAuth.put(`/admin/actualizar-producto/${productoId}`, datosActualizacion);
@@ -222,7 +232,7 @@ export const useEditarPedido = () => {
         toast.error('Error al actualizar producto');
         return false;
     }
-}, [selectedPedido, cargarProductosPedido]);
+  }, [selectedPedido, cargarProductosPedido]);
 
   // Función para eliminar un producto del pedido
   const eliminarProducto = useCallback(async (producto) => {
@@ -235,7 +245,10 @@ export const useEditarPedido = () => {
       const productoId = producto.id;
       const pedidoId = selectedPedido.id_pedido || selectedPedido.id;
       
-      console.log(`🗑️ Eliminando producto ${productoId} del pedido ${pedidoId}`);
+      console.log(`🗑️ Eliminando producto ${productoId} del pedido ${pedidoId}`, {
+        codigo_barra: producto.codigo_barra,
+        cod_interno: producto.cod_interno || 'No disponible'
+      });
 
       const response = await axiosAuth.delete(`/admin/eliminar-producto/${productoId}`);
 
@@ -260,6 +273,8 @@ export const useEditarPedido = () => {
     }
   }, [selectedPedido, cargarProductosPedido, sincronizarTotales]);
 
+  // Las demás funciones permanecen igual...
+  
   // Función para confirmar pedido
   const confirmarPedido = useCallback(async () => {
     if (!selectedPedido) {
@@ -278,7 +293,6 @@ export const useEditarPedido = () => {
       if (response.data.success) {
         console.log(`✅ Pedido ${pedidoId} confirmado exitosamente`);
         
-        // Actualizar estado local
         setSelectedPedido(prev => ({
           ...prev,
           estado: 'confirmado'
@@ -314,7 +328,6 @@ export const useEditarPedido = () => {
       if (response.data.success) {
         console.log(`✅ Pedido ${pedidoId} marcado como entregado`);
         
-        // Actualizar estado local
         setSelectedPedido(prev => ({
           ...prev,
           estado: 'entregado'
@@ -350,7 +363,6 @@ export const useEditarPedido = () => {
       if (response.data.success) {
         console.log(`✅ Pedido ${pedidoId} anulado exitosamente`);
         
-        // Actualizar estado local
         setSelectedPedido(prev => ({
           ...prev,
           estado: 'Anulado'
@@ -452,9 +464,6 @@ export const useEditarPedido = () => {
     try {
       const pedidoId = selectedPedido.id_pedido || selectedPedido.id;
       console.log(`📝 Actualizando observaciones del pedido ${pedidoId}`);
-
-      // Nota: Esta función podría necesitar un endpoint específico en el backend
-      // Por ahora simulo la actualización local
       
       setSelectedPedido(prev => ({
         ...prev,

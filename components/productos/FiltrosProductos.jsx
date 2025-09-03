@@ -50,7 +50,10 @@ export default function FiltrosProductos({
       termino: searchTerm.trim(),
       ...filtros
     };
-    onBuscar(parametrosBusqueda);
+    
+    // Codificar parámetros como JSON
+    const filtrosEncoded = encodeURIComponent(JSON.stringify(parametrosBusqueda));
+    onBuscar(filtrosEncoded);
   };
 
   const handleLimpiarFiltros = () => {

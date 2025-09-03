@@ -33,7 +33,7 @@ export const useProductoSearch = () => {
     try {
       console.log(`🔍 Buscando productos con término: "${terminoLimpio}"`);
       
-      const response = await axiosAuth.get(`/admin/productos?search=${encodeURIComponent(terminoLimpio)}`);
+      const response = await axiosAuth.get(`/admin/productos/${encodeURIComponent(terminoLimpio)}`);
       
       if (response.data && Array.isArray(response.data)) {
         setResultados(response.data);
@@ -100,7 +100,7 @@ export const useProductoSearch = () => {
     try {
       console.log(`🔍 Buscando producto por código: ${codigoBarra}`);
       
-      const response = await axiosAuth.get(`/admin/productos?search=${encodeURIComponent(codigoBarra)}`);
+      const response = await axiosAuth.get(`/admin/productos/${encodeURIComponent(codigoBarra)}`);      
       
       if (response.data && Array.isArray(response.data)) {
         const productoExacto = response.data.find(p => p.codigo_barra === codigoBarra);

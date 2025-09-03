@@ -95,7 +95,7 @@ export default function GestionImagenes({
 
   // Obtener URL de la imagen
   const getImagenUrl = (rutaImagen) => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     return `${apiUrl}${rutaImagen}`;
   };
 

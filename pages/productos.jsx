@@ -181,7 +181,8 @@ function ProductosContent() {
   }, [filtrosActivos, resetearPaginacion]);
 
   // HANDLERS para búsqueda y filtros
-  const handleBuscar = async (parametros) => {
+  const handleBuscar = async (filtrosEncoded) => {
+    const parametros = JSON.parse(decodeURIComponent(filtrosEncoded));
     const { termino, ...filtros } = parametros;
     
     // Aplicar filtros locales

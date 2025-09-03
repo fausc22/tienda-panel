@@ -10,20 +10,20 @@ export const useProductos = () => {
 
   // Función para cargar productos con búsqueda
   const cargarProductos = useCallback(async (searchTerm = '') => {
-    if (searchTerm && searchTerm.length < 2) {
-      toast.error('Ingrese al menos 2 caracteres para buscar');
-      return;
-    }
+  if (searchTerm && searchTerm.length < 2) {
+    toast.error('Ingrese al menos 2 caracteres para buscar');
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
+  
+  try {
+    console.log(`🔍 Cargando productos. Búsqueda: "${searchTerm}"`);
     
-    try {
-      console.log(`🔍 Cargando productos. Búsqueda: "${searchTerm}"`);
-      
-      // Usar la nueva ruta para obtener todos los productos cuando no hay búsqueda
-      const url = searchTerm 
-        ? `/admin/productos?search=${encodeURIComponent(searchTerm.trim())}`
-        : '/admin/productos-todos';
+    // CAMBIO PRINCIPAL: usar path parameter en lugar de query parameter
+    const url = searchTerm 
+      ? `/admin/productos/${encodeURIComponent(searchTerm.trim())}`
+      : '/admin/productos-todos';
 
       const response = await axiosAuth.get(url);
       

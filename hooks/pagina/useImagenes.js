@@ -1,4 +1,4 @@
-// hooks/pagina/useImagenes.js - Hook para gestión de imágenes
+// hooks/pagina/useImagenes.js - Hook corregido para gestión de imágenes
 import { useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { axiosAuth } from '../../utils/apiClient';
@@ -18,7 +18,6 @@ export const useImagenes = () => {
     try {
       console.log('🔄 Cargando imágenes de publicidad...');
       
-      // Nota: Necesitarías crear este endpoint en el backend
       const response = await axiosAuth.get('/admin/imagenes-publicidad');
       
       if (response.data && Array.isArray(response.data)) {
@@ -41,12 +40,30 @@ export const useImagenes = () => {
     }
   }, []);
 
-  // Validar archivo de imagen
+  // Validar archivo de imagen - MEJORADO
   const validarImagen = useCallback((file) => {
+    console.log('🔍 Validando archivo:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+
+    // Validar que sea un archivo
+    if (!file || !(file instanceof File)) {
+      toast.error('Archivo no válido');
+      return false;
+    }
+
     // Validar tamaño (5MB máximo para imágenes)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-      toast.error('La imagen es demasiado grande. Máximo 5MB permitido.');
+      toast.error(`La imagen es demasiado grande. Máximo 5MB permitido. Tamaño actual: ${(file.size / (1024 * 1024)).toFixed(2)}MB`);
+      return false;
+    }
+    
+    // Validar que no esté vacío
+    if (file.size === 0) {
+      toast.error('El archivo está vacío');
       return false;
     }
     
@@ -54,19 +71,35 @@ export const useImagenes = () => {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
     if (!allowedTypes.includes(file.type)) {
-      toast.error('Tipo de archivo no válido. Solo se permiten: JPG, PNG, WEBP');
+      toast.error(`Tipo de archivo no válido: ${file.type}. Solo se permiten: JPG, PNG, WEBP`);
       return false;
     }
     
+    console.log('✅ Archivo válido');
     return true;
   }, []);
 
-  // Manejar selección de archivo de imagen
+  // Manejar selección de archivo de imagen - MEJORADO
   const handleImagenChange = useCallback((e) => {
+    console.log('📁 Evento de cambio de archivo:', e.target.files);
+    
+    // Limpiar estados previos
+    setImagenSeleccionada(null);
+    setImagenPreview(null);
+    
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
+      console.log('📄 Archivo seleccionado:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: new Date(file.lastModified)
+      });
+      
       if (!validarImagen(file)) {
+        // Limpiar el input si el archivo no es válido
+        e.target.value = '';
         return;
       }
       
@@ -75,34 +108,71 @@ export const useImagenes = () => {
       // Generar preview
       const reader = new FileReader();
       reader.onload = (e) => {
+        console.log('🖼️ Preview generado');
         setImagenPreview(e.target.result);
       };
+      reader.onerror = (error) => {
+        console.error('❌ Error generando preview:', error);
+        toast.error('Error al generar vista previa de la imagen');
+      };
       reader.readAsDataURL(file);
+    } else {
+      console.log('❌ No se seleccionó ningún archivo');
     }
   }, [validarImagen]);
 
-  // Subir imagen de publicidad
+  // Subir imagen de publicidad - CORREGIDO
   const subirImagenPublicidad = useCallback(async (archivo = null) => {
     const archivoASubir = archivo || imagenSeleccionada;
+    
+    console.log('📤 Iniciando subida de imagen:', {
+      archivoParametro: !!archivo,
+      imagenSeleccionada: !!imagenSeleccionada,
+      archivoASubir: !!archivoASubir
+    });
     
     if (!archivoASubir) {
       toast.error('Seleccione una imagen para subir');
       return false;
     }
 
+    // Validar nuevamente antes de subir
+    if (!validarImagen(archivoASubir)) {
+      return false;
+    }
+
     setSubiendoImagen(true);
 
     try {
-      console.log('🔄 Subiendo imagen de publicidad...');
+      console.log('🔄 Preparando FormData...');
       
+      // CREAR FORMDATA CORRECTAMENTE
       const formData = new FormData();
-      formData.append('imagen', archivoASubir);
+      
+      // IMPORTANTE: El nombre del campo debe coincidir con el configurado en multer
+      formData.append('imagen', archivoASubir, archivoASubir.name);
+
+      // Debug: Verificar FormData
+      console.log('📋 FormData creado:');
+      for (let pair of formData.entries()) {
+        console.log(`  ${pair[0]}:`, pair[1]);
+      }
+
+      console.log('🚀 Enviando petición...');
 
       const response = await axiosAuth.post('/admin/subir-imagen-publicidad', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        // AGREGAR TIMEOUT Y CONFIGURACIONES ADICIONALES
+        timeout: 30000, // 30 segundos
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          console.log(`📊 Progreso de subida: ${percentCompleted}%`);
+        }
       });
+
+      console.log('📥 Respuesta recibida:', response.data);
 
       if (response.data.success) {
         console.log('✅ Imagen de publicidad subida exitosamente');
@@ -120,10 +190,19 @@ export const useImagenes = () => {
         throw new Error(response.data.message || 'Error al subir imagen');
       }
     } catch (error) {
-      console.error('❌ Error subiendo imagen de publicidad:', error);
+      console.error('❌ Error subiendo imagen de publicidad:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
       
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
+      } else if (error.code === 'ECONNABORTED') {
+        toast.error('Tiempo de espera agotado. La imagen puede ser demasiado grande.');
+      } else if (error.message.includes('Network Error')) {
+        toast.error('Error de red. Verifique su conexión a internet.');
       } else {
         toast.error('Error al subir la imagen de publicidad');
       }
@@ -131,7 +210,7 @@ export const useImagenes = () => {
     } finally {
       setSubiendoImagen(false);
     }
-  }, [imagenSeleccionada, cargarImagenes]);
+  }, [imagenSeleccionada, cargarImagenes, validarImagen]);
 
   // Eliminar imagen de publicidad
   const eliminarImagenPublicidad = useCallback(async (nombreImagen) => {
@@ -196,28 +275,51 @@ export const useImagenes = () => {
     }
   }, []);
 
-  // Subir imagen de producto
+  // Subir imagen de producto - CORREGIDO
   const subirImagenProducto = useCallback(async (codigoBarra, archivo = null) => {
     const archivoASubir = archivo || imagenSeleccionada;
+    
+    console.log('📤 Iniciando subida de imagen de producto:', {
+      codigoBarra,
+      archivoParametro: !!archivo,
+      imagenSeleccionada: !!imagenSeleccionada,
+      archivoASubir: !!archivoASubir
+    });
     
     if (!archivoASubir || !codigoBarra) {
       toast.error('Código de barra e imagen son requeridos');
       return false;
     }
 
+    // Validar nuevamente antes de subir
+    if (!validarImagen(archivoASubir)) {
+      return false;
+    }
+
     setSubiendoImagen(true);
 
     try {
-      console.log(`🔄 Subiendo imagen para producto: ${codigoBarra}`);
+      console.log(`🔄 Preparando FormData para producto: ${codigoBarra}`);
       
       const formData = new FormData();
-      formData.append('imagen', archivoASubir);
+      formData.append('imagen', archivoASubir, archivoASubir.name);
       formData.append('codigo_barra', codigoBarra);
+
+      // Debug: Verificar FormData
+      console.log('📋 FormData creado:');
+      for (let pair of formData.entries()) {
+        console.log(`  ${pair[0]}:`, pair[1]);
+      }
 
       const response = await axiosAuth.post('/admin/subir-imagen-producto', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 30000,
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          console.log(`📊 Progreso de subida: ${percentCompleted}%`);
+        }
       });
 
       if (response.data.success) {
@@ -237,6 +339,8 @@ export const useImagenes = () => {
       
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
+      } else if (error.code === 'ECONNABORTED') {
+        toast.error('Tiempo de espera agotado. La imagen puede ser demasiado grande.');
       } else {
         toast.error('Error al subir la imagen del producto');
       }
@@ -244,7 +348,7 @@ export const useImagenes = () => {
     } finally {
       setSubiendoImagen(false);
     }
-  }, [imagenSeleccionada]);
+  }, [imagenSeleccionada, validarImagen]);
 
   // Limpiar estados
   const limpiarEstados = useCallback(() => {
@@ -265,6 +369,24 @@ export const useImagenes = () => {
       preview: imagenPreview
     };
   }, [imagenSeleccionada, imagenPreview]);
+
+  // NUEVA FUNCIÓN: Debug para diagnosticar problemas
+  const debugSubida = useCallback(() => {
+    console.log('🐛 DEBUG INFO:');
+    console.log('- imagenSeleccionada:', imagenSeleccionada);
+    console.log('- imagenPreview:', !!imagenPreview);
+    console.log('- subiendoImagen:', subiendoImagen);
+    
+    if (imagenSeleccionada) {
+      console.log('- Detalles del archivo:', {
+        name: imagenSeleccionada.name,
+        size: imagenSeleccionada.size,
+        type: imagenSeleccionada.type,
+        lastModified: new Date(imagenSeleccionada.lastModified),
+        isFile: imagenSeleccionada instanceof File
+      });
+    }
+  }, [imagenSeleccionada, imagenPreview, subiendoImagen]);
 
   return {
     // Estados
@@ -289,6 +411,7 @@ export const useImagenes = () => {
     validarImagen,
     limpiarEstados,
     getImagenInfo,
+    debugSubida, // Nueva función para debug
     
     // Setters
     setImagenSeleccionada,
