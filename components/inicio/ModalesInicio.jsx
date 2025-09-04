@@ -230,18 +230,33 @@ export function ModalEnviarPedido({
 
   if (!pedido) return null;
 
+  // Verificar si es retiro en local - DEBE SER EXACTAMENTE IGUAL AL STRING EN LA BD
+  const esRetiroEnLocal = pedido.direccion_cliente === "Retiro en local";
+  
+  console.log('🔍 DEBUG Modal:', {
+    direccion_cliente: pedido.direccion_cliente,
+    esRetiroEnLocal: esRetiroEnLocal
+  });
+
   const handleEnviar = () => {
-    if (!horarioDesde || !horarioHasta) {
-      toast.error('Por favor complete ambos horarios');
-      return;
+    // Para retiro en local no validar horarios
+    if (!esRetiroEnLocal) {
+      if (!horarioDesde || !horarioHasta) {
+        toast.error('Por favor complete ambos horarios');
+        return;
+      }
+
+      if (horarioDesde >= horarioHasta) {
+        toast.error('El horario desde debe ser menor al horario hasta');
+        return;
+      }
     }
 
-    if (horarioDesde >= horarioHasta) {
-      toast.error('El horario desde debe ser menor al horario hasta');
-      return;
-    }
-
-    onEnviar(horarioDesde, horarioHasta);
+    // Enviar horarios solo si NO es retiro en local
+    onEnviar(
+      esRetiroEnLocal ? '' : horarioDesde, 
+      esRetiroEnLocal ? '' : horarioHasta
+    );
   };
 
   return (
@@ -249,7 +264,7 @@ export function ModalEnviarPedido({
       <div className="bg-white rounded-lg max-w-md w-full">
         <div className="p-6">
           <h2 className="text-xl font-bold mb-4 text-center text-gray-800">
-            Seleccionar Horario de Entrega
+            {esRetiroEnLocal ? 'Pedido Listo para Retirar' : 'Seleccionar Horario de Entrega'}
           </h2>
           
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
@@ -257,39 +272,73 @@ export function ModalEnviarPedido({
               Pedido para: <strong>{pedido.cliente}</strong>
             </p>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Horario desde:
-                </label>
-                <input
-                  type="time"
-                  value={horarioDesde}
-                  onChange={(e) => setHorarioDesde(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                />
+            {esRetiroEnLocal ? (
+              // MOSTRAR SOLO PARA RETIRO EN LOCAL
+              <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
+                <div className="text-center">
+                  <div className="text-4xl mb-2">🏪</div>
+                  <p className="text-yellow-800 font-medium text-lg">
+                    El pedido va a ser retirado en el local
+                  </p>
+                  <p className="text-yellow-700 text-sm mt-2">
+                    El cliente será notificado que puede retirar su pedido
+                  </p>
+                </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Horario hasta:
-                </label>
-                <input
-                  type="time"
-                  value={horarioHasta}
-                  onChange={(e) => setHorarioHasta(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
+            ) : (
+              // MOSTRAR SOLO PARA DELIVERY CON HORARIOS
+              <>
+                <div className="bg-green-100 border border-green-300 rounded-lg p-3 mb-4">
+                  <p className="text-center text-green-800 font-medium text-sm">
+                    🚚 Pedido para delivery a:
+                  </p>
+                  <p className="text-center text-green-700 font-bold">
+                    {pedido.direccion_cliente}
+                  </p>
+                  <p className="text-center text-green-600 text-xs mt-1">
+                    Seleccione el horario estimado de entrega
+                  </p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Horario desde:
+                    </label>
+                    <input
+                      type="time"
+                      value={horarioDesde}
+                      onChange={(e) => setHorarioDesde(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Horario hasta:
+                    </label>
+                    <input
+                      type="time"
+                      value={horarioHasta}
+                      onChange={(e) => setHorarioHasta(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <button 
               onClick={handleEnviar}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold"
+              className={`px-6 py-3 rounded-lg transition-colors font-semibold text-white ${
+                esRetiroEnLocal 
+                  ? 'bg-yellow-600 hover:bg-yellow-700' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              🚚 ENVIAR PEDIDO
+              {esRetiroEnLocal ? '✅ MARCAR LISTO PARA RETIRAR' : '🚚 ENVIAR PEDIDO'}
             </button>
             <button 
               onClick={onClose}

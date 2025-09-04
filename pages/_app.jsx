@@ -2,6 +2,7 @@ import '../styles/globals.css';
 import { AuthProvider } from '../context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
+import { PedidosProvider } from '../context/PedidosContext';
 import { useRouter } from 'next/router';
 import Layout from '../components/layout/Layout';
 
@@ -10,6 +11,7 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <AuthProvider>
+      <PedidosProvider>
       <AnimatePresence mode="wait" initial={false}>
         <div key={router.route}>
           <Layout>
@@ -59,6 +61,7 @@ function MyApp({ Component, pageProps }) {
           />
         </div>
       </AnimatePresence>
+      </PedidosProvider>
     </AuthProvider>
   );
 }

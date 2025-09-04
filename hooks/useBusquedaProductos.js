@@ -100,7 +100,7 @@ export const useProductoSearch = () => {
     try {
       console.log(`🔍 Buscando producto por código: ${codigoBarra}`);
       
-      const response = await axiosAuth.get(`/admin/productos/${encodeURIComponent(codigoBarra)}`);      
+      const response = await axiosAuth.get(`/admin/buscar-productos/${encodeURIComponent(terminoLimpio)}`); 
       
       if (response.data && Array.isArray(response.data)) {
         const productoExacto = response.data.find(p => p.codigo_barra === codigoBarra);

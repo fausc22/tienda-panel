@@ -1,13 +1,14 @@
-// pages/inicio.jsx - Página principal con gestión completa de pedidos ACTUALIZADA CON MP3
+// pages/inicio.jsx - ACTUALIZADO para usar el hook consolidado
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Head from 'next/head';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useProtectedPage } from '../hooks/useAuthRedirect';
 
-// Hooks personalizados
-import { usePedidosInicio } from '../hooks/pedidos/usePedidosInicio';
-import { useEditarPedido } from '../hooks/pedidos/useEditarPedido';
+// Hook del contexto global (solo para cargar listas de pedidos)
+import { usePedidos } from '../context/PedidosContext';
+// Hook consolidado para edición (maneja todo internamente)
+import { useEditarPedidoSimplificado } from '../hooks/pedidos/useEditarPedidoSimplificado';
 
 // Componentes
 import TablaPedidosInicio from '../components/inicio/TablaPedidosInicio';
@@ -26,11 +27,15 @@ import { useNotificacionesPedidos } from '../hooks/pedidos/useNotificacionPedido
 import { NotificacionNuevoPedido } from '../components/inicio/NotificacionNuevoPedido';
 
 function InicioContent() {
-  // Hook de autenticación y protección
+  // ==============================================
+  // HOOKS DE AUTENTICACIÓN
+  // ==============================================
   const { isLoading: authLoading } = useProtectedPage();
   const { user } = useAuth();
 
-  // Estados para modales - ACTUALIZADOS
+  // ==============================================
+  // ESTADOS PARA MODALES
+  // ==============================================
   const [mostrarModalDetalle, setMostrarModalDetalle] = useState(false);
   const [mostrarModalAgregarProducto, setMostrarModalAgregarProducto] = useState(false);
   const [mostrarModalEditarProducto, setMostrarModalEditarProducto] = useState(false);
@@ -43,54 +48,71 @@ function InicioContent() {
   const [productoEditando, setProductoEditando] = useState(null);
   const [productoEliminando, setProductoEliminando] = useState(null);
 
-  // Estados para paginación manual
+  // ==============================================
+  // ESTADOS PARA PAGINACIÓN
+  // ==============================================
   const [paginaPendientes, setPaginaPendientes] = useState(1);
   const [registrosPorPaginaPendientes, setRegistrosPorPaginaPendientes] = useState(10);
   const [paginaEntregados, setPaginaEntregados] = useState(1);
   const [registrosPorPaginaEntregados, setRegistrosPorPaginaEntregados] = useState(10);
 
-  // Hook para gestión de pedidos
+  // ==============================================
+  // HOOKS PRINCIPALES
+  // ==============================================
+  
+  // Context global SOLO para listas de pedidos
   const { 
     pedidosPendientes,
     pedidosEntregados,
-    loading, 
-    cargarPedidos,
-    estadisticas
-  } = usePedidosInicio();
+    loading: loadingListas, 
+    cargarPedidos
+  } = usePedidos();
 
-  // Hook para edición de pedidos
+  // Hook consolidado para edición de pedidos
   const {
     selectedPedido,
     productos,
     loading: loadingProductos,
-    cargarProductosPedido,
+    operacionEnProgreso,
+    seleccionarPedido,
     agregarProducto,
-    eliminarProducto,
     actualizarProducto,
+    eliminarProducto,
     verificarStock,
     confirmarPedido,
     enviarPedido,
     anularPedido,
     enviarEmailConfirmado,
     enviarEmailEnCamino,
-    cerrarEdicion
-  } = useEditarPedido();
+    cerrarEdicion,
+    calcularTotales,
+    esPedidoModificable,
+    esPedidoConfirmado,
+    esPedidoEntregado,
+    esPedidoAnulado,
+    puedeConfirmarPedido,
+    puedeEnviarPedido,
+    puedeAnularPedido
+  } = useEditarPedidoSimplificado();
 
-  // Hook de notificaciones con audio MP3 ← ACTUALIZADO
+  // Hook de notificaciones
   const {
-  ultimoCheckeo,
-  nuevoPedido,
-  mostrarNotificacion,
-  sonidoHabilitado,
-  audioListo,
-  iniciarMonitoreo,
-  detenerMonitoreo,
-  cerrarNotificacion,
-  detenerSonido,
-  habilitarNotificaciones  // ← NUEVA función
-} = useNotificacionesPedidos();
+    ultimoCheckeo,
+    nuevoPedido,
+    mostrarNotificacion,
+    sonidoHabilitado,
+    audioListo,
+    iniciarMonitoreo,
+    detenerMonitoreo,
+    cerrarNotificacion,
+    detenerSonido,
+    habilitarNotificaciones
+  } = useNotificacionesPedidos();
 
-  // Cálculos de paginación para pedidos pendientes
+  // ==============================================
+  // CÁLCULOS DE PAGINACIÓN
+  // ==============================================
+  
   const totalPaginasPendientes = useMemo(() => {
     return Math.ceil((pedidosPendientes?.length || 0) / registrosPorPaginaPendientes);
   }, [pedidosPendientes, registrosPorPaginaPendientes]);
@@ -103,7 +125,6 @@ function InicioContent() {
     return pedidosPendientes.slice(indexOfPrimeroPendientes, indexOfUltimoPendientes);
   }, [pedidosPendientes, indexOfPrimeroPendientes, indexOfUltimoPendientes]);
 
-  // Cálculos de paginación para pedidos entregados
   const totalPaginasEntregados = useMemo(() => {
     return Math.ceil((pedidosEntregados?.length || 0) / registrosPorPaginaEntregados);
   }, [pedidosEntregados, registrosPorPaginaEntregados]);
@@ -116,7 +137,10 @@ function InicioContent() {
     return pedidosEntregados.slice(indexOfPrimeroEntregados, indexOfUltimoEntregados);
   }, [pedidosEntregados, indexOfPrimeroEntregados, indexOfUltimoEntregados]);
 
-  // Funciones de paginación
+  // ==============================================
+  // FUNCIONES DE PAGINACIÓN
+  // ==============================================
+  
   const cambiarPaginaPendientes = (nuevaPagina) => {
     setPaginaPendientes(nuevaPagina);
   };
@@ -135,46 +159,35 @@ function InicioContent() {
     setPaginaEntregados(1);
   };
 
+  // ==============================================
+  // EFECTOS DE CARGA INICIAL
+  // ==============================================
+  
   // Cargar datos al montar el componente
   useEffect(() => {
     if (!authLoading && user) {
-      console.log('🔄 Usuario cargado, cargando pedidos de inicio:', {
-        usuario: user.nombre || user.username,
-        rol: user.rol
-      });
+      console.log('🔄 Usuario cargado, cargando pedidos de inicio');
       cargarPedidos();
     }
   }, [user, authLoading, cargarPedidos]);
 
-  // Inicializar monitoreo de pedidos con MP3 ← ACTUALIZADO
+  // Inicializar monitoreo de pedidos
   useEffect(() => {
     if (!authLoading && user) {
-      console.log('🔄 Iniciando monitoreo de nuevos pedidos con audio MP3');
-      console.log('🎵 Estado del audio:', { sonidoHabilitado, audioListo });
-      
-      // Iniciar monitoreo cada 15 segundos
+      console.log('🔄 Iniciando monitoreo de nuevos pedidos');
       iniciarMonitoreo(15000);
       
-      // Limpiar al desmontar
       return () => {
         console.log('🧹 Limpiando monitoreo y deteniendo audio...');
         detenerMonitoreo();
       };
     }
-  }, [user, authLoading, iniciarMonitoreo, detenerMonitoreo, sonidoHabilitado, audioListo]);
+  }, [user, authLoading, iniciarMonitoreo, detenerMonitoreo]);
 
-  // Handler para ver pedido desde notificación ← YA NO NECESARIO porque ahora recarga automáticamente
-  const handleVerPedidoDesdeNotificacion = async (pedido) => {
-    try {
-      console.log('👁️ Abriendo pedido desde notificación:', pedido.id_pedido);
-      // La función cerrarNotificacion() se encargará de recargar la página
-    } catch (error) {
-      console.error('❌ Error:', error);
-      toast.error('Error al procesar pedido');
-    }
-  };
-
-  // Función para cerrar TODOS los modales
+  // ==============================================
+  // FUNCIONES DE GESTIÓN DE MODALES
+  // ==============================================
+  
   const cerrarTodosLosModales = useCallback(() => {
     setMostrarModalDetalle(false);
     setMostrarModalAgregarProducto(false);
@@ -187,20 +200,24 @@ function InicioContent() {
     setProductoEliminando(null);
   }, []);
 
-  // HANDLERS para eventos de la tabla
+  // ==============================================
+  // HANDLERS DE EVENTOS PRINCIPALES
+  // ==============================================
+  
   const handleRowDoubleClick = async (pedido) => {
     try {
-      // Primero cerrar todos los modales
       cerrarTodosLosModales();
       
-      // Luego cargar datos y abrir modal
-      await cargarProductosPedido(pedido);
+      console.log('🔄 Cargando pedido para mostrar en modal...');
       
-      // Usar setTimeout para asegurar que los estados se actualicen
-      setTimeout(() => {
-        setMostrarModalDetalle(true);
-      }, 100);
+      // Usar el hook consolidado para cargar el pedido
+      await seleccionarPedido(pedido);
+      
+      // Abrir modal
+      setMostrarModalDetalle(true);
+      
     } catch (error) {
+      console.error('❌ Error al cargar detalles del pedido:', error);
       toast.error('Error al cargar detalles del pedido');
     }
   };
@@ -210,7 +227,20 @@ function InicioContent() {
     cerrarEdicion();
   };
 
-  // HANDLERS para productos
+  const handleVerPedidoDesdeNotificacion = async (pedido) => {
+    try {
+      console.log('👁️ Abriendo pedido desde notificación:', pedido.id_pedido);
+      // La función cerrarNotificacion() se encargará de recargar la página
+    } catch (error) {
+      console.error('❌ Error:', error);
+      toast.error('Error al procesar pedido');
+    }
+  };
+
+  // ==============================================
+  // HANDLERS PARA PRODUCTOS
+  // ==============================================
+  
   const handleAgregarProducto = () => {
     setMostrarModalDetalle(false);
     setMostrarModalAgregarProducto(true);
@@ -233,7 +263,6 @@ function InicioContent() {
     } catch (error) {
       console.error('❌ Error al obtener stock:', error);
       toast.error('Error al consultar stock del producto');
-      // Continuar con stock 0 para no bloquear la edición
       setProductoEditando({ ...producto, stock_actual: 0 });
       setMostrarModalDetalle(false);
       setMostrarModalEditarProducto(true);
@@ -246,7 +275,10 @@ function InicioContent() {
     setMostrarModalEliminarProducto(true);
   };
 
-  // HANDLERS para modales de productos
+  // ==============================================
+  // HANDLERS PARA MODALES DE PRODUCTOS
+  // ==============================================
+  
   const handleCloseModalAgregarProducto = () => {
     setMostrarModalAgregarProducto(false);
     setMostrarModalDetalle(true);
@@ -264,30 +296,29 @@ function InicioContent() {
     setMostrarModalDetalle(true);
   };
 
-  // HANDLERS para confirmación de acciones de productos - ACTUALIZADOS
+  // ==============================================
+  // HANDLERS PARA CONFIRMACIÓN DE ACCIONES
+  // ==============================================
+  
   const handleConfirmarAgregarProducto = async (producto, cantidad) => {
     try {
-        console.log('🔄 Agregando producto...');
+      console.log('🔄 Agregando producto...');
+      
+      const exito = await agregarProducto(producto, cantidad);
+      if (exito) {
+        console.log('✅ Producto agregado exitosamente');
+        handleCloseModalAgregarProducto();
         
-        const exito = await agregarProducto(producto, cantidad);
-        if (exito) {
-            console.log('✅ Producto agregado exitosamente');
-            
-            // CERRAR MODAL PRIMERO
-            handleCloseModalAgregarProducto();
-            
-            // RECARGAR PEDIDOS INMEDIATAMENTE - ESTA ES LA CLAVE
-            console.log('🔄 Recargando pedidos después de agregar producto...');
-            await cargarPedidos();
-            console.log('✅ Pedidos actualizados en tabla');
-            
-            toast.success('Producto agregado y tabla actualizada');
-        }
-        return exito;
+        // Recargar la lista de pedidos para reflejar cambios
+        await cargarPedidos();
+        
+        toast.success('Producto agregado y listas actualizadas');
+      }
+      return exito;
     } catch (error) {
-        console.error('❌ Error en handleConfirmarAgregarProducto:', error);
-        toast.error('Error al agregar producto');
-        return false;
+      console.error('❌ Error en handleConfirmarAgregarProducto:', error);
+      toast.error('Error al agregar producto');
+      return false;
     }
   };
 
@@ -295,18 +326,18 @@ function InicioContent() {
     if (!productoEditando) return;
     
     try {
-        const exito = await actualizarProducto(productoEditando);
-        if (exito) {
-            handleCloseModalEditarProducto();
-            
-            // RECARGAR INMEDIATAMENTE
-            await cargarPedidos();
-            
-            toast.success('Producto editado y tabla actualizada');
-        }
+      const exito = await actualizarProducto(productoEditando);
+      if (exito) {
+        handleCloseModalEditarProducto();
+        
+        // Recargar la lista de pedidos para reflejar cambios
+        await cargarPedidos();
+        
+        toast.success('Producto editado y listas actualizadas');
+      }
     } catch (error) {
-        console.error('❌ Error editando producto:', error);
-        toast.error('Error al editar producto');
+      console.error('❌ Error editando producto:', error);
+      toast.error('Error al editar producto');
     }
   };
 
@@ -314,22 +345,25 @@ function InicioContent() {
     if (!productoEliminando) return;
     
     try {
-        const exito = await eliminarProducto(productoEliminando);
-        if (exito) {
-            handleCloseModalEliminarProducto();
-            
-            // RECARGAR INMEDIATAMENTE  
-            await cargarPedidos();
-            
-            toast.success('Producto eliminado y tabla actualizada');
-        }
+      const exito = await eliminarProducto(productoEliminando);
+      if (exito) {
+        handleCloseModalEliminarProducto();
+        
+        // Recargar la lista de pedidos para reflejar cambios
+        await cargarPedidos();
+        
+        toast.success('Producto eliminado y listas actualizadas');
+      }
     } catch (error) {
-        console.error('❌ Error eliminando producto:', error);
-        toast.error('Error al eliminar producto');
+      console.error('❌ Error eliminando producto:', error);
+      toast.error('Error al eliminar producto');
     }
   };
 
-  // HANDLERS para gestión de estados del pedido - NUEVOS
+  // ==============================================
+  // HANDLERS PARA GESTIÓN DE ESTADOS DEL PEDIDO
+  // ==============================================
+  
   const handleConfirmarPedido = () => {
     setMostrarModalDetalle(false);
     setMostrarModalConfirmarPedido(true);
@@ -345,20 +379,18 @@ function InicioContent() {
     setMostrarModalAnularPedido(true);
   };
 
-  // HANDLERS para confirmación de cambios de estado - NUEVOS
   const handleConfirmarConfirmarPedido = async () => {
     try {
       console.log('🔄 Confirmando pedido...');
       
       const exito = await confirmarPedido();
       if (exito) {
-        // Enviar email de confirmación
         await enviarEmailConfirmado();
         
         setMostrarModalConfirmarPedido(false);
         setMostrarModalDetalle(true);
         
-        // Recargar pedidos para actualizar las tablas
+        // Recargar la lista de pedidos para reflejar cambios
         await cargarPedidos();
         
         toast.success('Pedido confirmado y email enviado');
@@ -375,13 +407,12 @@ function InicioContent() {
       
       const exito = await enviarPedido(horarioDesde, horarioHasta);
       if (exito) {
-        // Enviar email de pedido en camino
         await enviarEmailEnCamino(horarioDesde, horarioHasta);
         
         setMostrarModalEnviarPedido(false);
-        handleCloseModalDetalle(); // Cerrar modal de detalle ya que el pedido pasó a entregados
+        handleCloseModalDetalle();
         
-        // Recargar pedidos para actualizar las tablas
+        // Recargar la lista de pedidos para reflejar cambios
         await cargarPedidos();
         
         toast.success('Pedido enviado y email de seguimiento enviado');
@@ -399,9 +430,9 @@ function InicioContent() {
       const exito = await anularPedido();
       if (exito) {
         setMostrarModalAnularPedido(false);
-        handleCloseModalDetalle(); // Cerrar modal de detalle
+        handleCloseModalDetalle();
         
-        // Recargar pedidos para actualizar las tablas
+        // Recargar la lista de pedidos para reflejar cambios
         await cargarPedidos();
         
         toast.success('Pedido anulado correctamente');
@@ -412,7 +443,10 @@ function InicioContent() {
     }
   };
 
-  // HANDLERS para cerrar modales de confirmación - NUEVOS
+  // ==============================================
+  // HANDLERS PARA CERRAR MODALES DE CONFIRMACIÓN
+  // ==============================================
+  
   const handleCloseModalConfirmarPedido = () => {
     setMostrarModalConfirmarPedido(false);
     setMostrarModalDetalle(true);
@@ -428,7 +462,10 @@ function InicioContent() {
     setMostrarModalDetalle(true);
   };
 
-  // Mostrar loading mientras se autentica
+  // ==============================================
+  // RENDER CONDICIONAL DE LOADING
+  // ==============================================
+  
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -440,7 +477,10 @@ function InicioContent() {
     );
   }
 
-  // Función para obtener el saludo dinámico
+  // ==============================================
+  // FUNCIÓN PARA SALUDO DINÁMICO
+  // ==============================================
+  
   const getSaludo = () => {
     const hora = new Date().getHours();
     if (hora < 12) return 'Buenos días';
@@ -448,6 +488,10 @@ function InicioContent() {
     return 'Buenas noches';
   };
 
+  // ==============================================
+  // RENDER PRINCIPAL
+  // ==============================================
+  
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <Head>
@@ -456,6 +500,7 @@ function InicioContent() {
       </Head>
       
       <div className="max-w-7xl mx-auto">
+        {/* HEADER */}
         <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
             <div>
@@ -467,41 +512,41 @@ function InicioContent() {
               </p>
             </div>
             
-            {/* SOLO TIMESTAMP DEL ÚLTIMO CHEQUEO */}
+            {/* CONTROLES DE AUDIO Y TIMESTAMP */}
             <div className="flex items-center space-x-4 mt-4 sm:mt-0">
-            {/* Botón para habilitar audio */}
-            {!sonidoHabilitado && (
-              <button
-                onClick={async () => {
-                  const exito = await habilitarNotificaciones();
-                  if (exito) {
-                    toast.success('🔊 Notificaciones de audio habilitadas');
-                  } else {
-                    toast.error('No se pudo habilitar el audio');
-                  }
-                }}
-                className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-2"
-              >
-                <span>🔊</span>
-                <span>Habilitar Audio</span>
-              </button>
-            )}
+              {/* Botón para habilitar audio */}
+              {!sonidoHabilitado && (
+                <button
+                  onClick={async () => {
+                    const exito = await habilitarNotificaciones();
+                    if (exito) {
+                      toast.success('🔊 Notificaciones de audio habilitadas');
+                    } else {
+                      toast.error('No se pudo habilitar el audio');
+                    }
+                  }}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-2"
+                >
+                  <span>🔊</span>
+                  <span>Habilitar Audio</span>
+                </button>
+              )}
 
-            {/* Estado del audio */}
-            {sonidoHabilitado && (
-              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-sm flex items-center space-x-2">
-                <span>✅</span>
-                <span>Audio Habilitado</span>
-              </span>
-            )}
+              {/* Estado del audio */}
+              {sonidoHabilitado && (
+                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-sm flex items-center space-x-2">
+                  <span>✅</span>
+                  <span>Audio Habilitado</span>
+                </span>
+              )}
 
-            {/* Timestamp del último chequeo */}
-            {ultimoCheckeo && (
-              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-lg">
-                📡 {ultimoCheckeo.toLocaleTimeString()}
-              </span>
-            )}
-          </div>
+              {/* Timestamp del último chequeo */}
+              {ultimoCheckeo && (
+                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-lg">
+                  📡 {ultimoCheckeo.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -512,7 +557,7 @@ function InicioContent() {
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-bold text-orange-600 flex items-center">
                 📋 PEDIDOS PENDIENTES
-                {loading && (
+                {loadingListas && (
                   <div className="ml-2 animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
                 )}
               </h2>
@@ -525,7 +570,7 @@ function InicioContent() {
               <TablaPedidosInicio
                 pedidos={pedidosPendientesActuales}
                 onRowDoubleClick={handleRowDoubleClick}
-                loading={loading}
+                loading={loadingListas}
                 tipo="pendientes"
               />
               
@@ -547,7 +592,7 @@ function InicioContent() {
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-bold text-green-600 flex items-center">
                 ✅ PEDIDOS ENTREGADOS
-                {loading && (
+                {loadingListas && (
                   <div className="ml-2 animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
                 )}
               </h2>
@@ -560,7 +605,7 @@ function InicioContent() {
               <TablaPedidosInicio
                 pedidos={pedidosEntregadosActuales}
                 onRowDoubleClick={handleRowDoubleClick}
-                loading={loading}
+                loading={loadingListas}
                 tipo="entregados"
               />
               
@@ -579,7 +624,9 @@ function InicioContent() {
         </div>
       </div>
       
-      {/* MODALES - SISTEMA MEJORADO */}
+      {/* ==============================================
+          MODALES DEL SISTEMA
+          ============================================== */}
       
       {/* Modal principal de detalle */}
       {mostrarModalDetalle && !mostrarModalAgregarProducto && !mostrarModalEditarProducto && 
@@ -588,7 +635,7 @@ function InicioContent() {
         <ModalDetallePedidoInicio
           pedido={selectedPedido}
           productos={productos}
-          loading={loadingProductos}
+          loading={loadingProductos || operacionEnProgreso}
           onClose={handleCloseModalDetalle}
           onAgregarProducto={handleAgregarProducto}
           onEditarProducto={handleEditarProducto}
@@ -658,13 +705,13 @@ function InicioContent() {
         />
       )}
 
-      {/* NOTIFICACIÓN DE NUEVO PEDIDO CON MP3 ← ACTUALIZADO */}
+      {/* NOTIFICACIÓN DE NUEVO PEDIDO */}
       <NotificacionNuevoPedido
         mostrar={mostrarNotificacion}
         pedido={nuevoPedido}
-        onCerrar={cerrarNotificacion} // ← Ahora recarga automáticamente
+        onCerrar={cerrarNotificacion}
         onVerPedido={handleVerPedidoDesdeNotificacion}
-        detenerSonido={detenerSonido} // ← Nueva prop
+        detenerSonido={detenerSonido}
       />
     </div>
   );
