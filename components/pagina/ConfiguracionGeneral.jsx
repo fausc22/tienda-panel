@@ -269,21 +269,21 @@ export default function ConfiguracionGeneral({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nivel de IVA
+                Lista de Precio
               </label>
               <select
                 value={formData.iva || '0'}
                 onChange={(e) => handleCampoChange('iva', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="0">Sin IVA (0%)</option>
-                <option value="1">IVA Nivel 1</option>
-                <option value="2">IVA Nivel 2</option>
-                <option value="3">IVA Nivel 3</option>
-                <option value="4">IVA Nivel 4</option>
+                <option value="0">LISTA 0</option>
+                <option value="1">LISTA 1</option>
+                <option value="2">LISTA 2</option>
+                <option value="3">LISTA 3</option>
+                <option value="4">LISTA 4</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Configuración de precios según categoría fiscal
+                Selecciona la lista de precios a utilizar
               </p>
             </div>
 
@@ -340,6 +340,49 @@ export default function ConfiguracionGeneral({
                 {formData.pageStatus === 'ACTIVA' ? 'Tienda Activa' :
                  formData.pageStatus === 'MANTENIMIENTO' ? 'En Mantenimiento' :
                  'Tienda Inactiva'}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-4">
+                HORARIOS
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">INICIO</label>
+                  <select
+                    value={formData.horaInicio || '08:00'}
+                    onChange={(e) => handleCampoChange('horaInicio', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => {
+                      const hour = i.toString().padStart(2, '0');
+                      return (
+                        <option key={hour} value={`${hour}:00`}>
+                          {hour}:00
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">FIN</label>
+                  <select
+                    value={formData.horaFin || '22:00'}
+                    onChange={(e) => handleCampoChange('horaFin', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => {
+                      const hour = i.toString().padStart(2, '0');
+                      return (
+                        <option key={hour} value={`${hour}:00`}>
+                          {hour}:00
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
               </div>
             </div>
           </div>

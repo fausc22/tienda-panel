@@ -9,7 +9,7 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000, // 30 segundos de timeout
   headers: {
-    'Content-Type': 'application/json',
+    // Sin headers por defecto
   },
 });
 
@@ -18,7 +18,8 @@ const authApiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json',
+    // ❌ ELIMINAR ESTA LÍNEA PARA EVITAR CONFLICTOS CON FORMDATA
+    // 'Content-Type': 'application/json',
   },
 });
 
@@ -50,9 +51,36 @@ apiClient.interceptors.request.use(
   }
 );
 
+// Interceptor mejorado para requests autenticados
 authApiClient.interceptors.request.use(
   (config) => {
     logApi(`📤 ${config.method?.toUpperCase()} ${config.url} [AUTH]`, 'info', 'REQUEST');
+    
+    // Detectar tipo de contenido y establecer headers apropiados
+    if (config.data instanceof FormData) {
+      // Para FormData, NO establecer Content-Type - axios lo maneja automáticamente
+      logApi(`📋 FormData detectado - dejando que axios maneje Content-Type`, 'info', 'REQUEST');
+      
+      // Asegurarse de que no hay Content-Type manual que pueda interferir
+      delete config.headers['Content-Type'];
+      delete config.headers['content-type'];
+      
+      logApi(`🧹 Headers de Content-Type eliminados para FormData`, 'info', 'REQUEST');
+      
+    } else if (config.data && typeof config.data === 'object') {
+      // Para objetos JSON, establecer Content-Type explícitamente
+      config.headers['Content-Type'] = 'application/json';
+      logApi(`📋 Content-Type establecido como application/json para objeto`, 'info', 'REQUEST');
+      
+    } else if (!config.headers['Content-Type'] && config.method !== 'get') {
+      // Para otros casos (excepto GET), usar JSON por defecto
+      config.headers['Content-Type'] = 'application/json';
+      logApi(`📋 Content-Type por defecto establecido como application/json`, 'info', 'REQUEST');
+    }
+    
+    // Log de headers finales para debug
+    logApi(`🔍 Headers finales: ${JSON.stringify(config.headers)}`, 'info', 'REQUEST');
+    
     return config;
   },
   (error) => {

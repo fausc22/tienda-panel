@@ -1,4 +1,4 @@
-// hooks/pagina/useImagenes.js - Hook corregido para gestión de imágenes
+// hooks/pagina/useImagenes.js - VERSION CON FETCH NATIVO PARA UPLOADS
 import { useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { axiosAuth } from '../../utils/apiClient';
@@ -11,7 +11,12 @@ export const useImagenes = () => {
   const [subiendoImagen, setSubiendoImagen] = useState(false);
   const [verificandoImagen, setVerificandoImagen] = useState(false);
 
-  // Función para cargar imágenes de publicidad
+  // Obtener token del localStorage
+  const getToken = () => {
+    return localStorage.getItem('adminToken') || localStorage.getItem('token');
+  };
+
+  // Función para cargar imágenes de publicidad (mantener con axios)
   const cargarImagenes = useCallback(async () => {
     setLoading(true);
     
@@ -40,28 +45,27 @@ export const useImagenes = () => {
     }
   }, []);
 
-  // Validar archivo de imagen - MEJORADO
+  // Validar archivo de imagen
   const validarImagen = useCallback((file) => {
     console.log('🔍 Validando archivo:', {
       name: file.name,
       size: file.size,
-      type: file.type
+      type: file.type,
+      lastModified: file.lastModified
     });
 
-    // Validar que sea un archivo
     if (!file || !(file instanceof File)) {
       toast.error('Archivo no válido');
       return false;
     }
 
-    // Validar tamaño (5MB máximo para imágenes)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Validar tamaño (5MB máximo)
+    const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error(`La imagen es demasiado grande. Máximo 5MB permitido. Tamaño actual: ${(file.size / (1024 * 1024)).toFixed(2)}MB`);
       return false;
     }
     
-    // Validar que no esté vacío
     if (file.size === 0) {
       toast.error('El archivo está vacío');
       return false;
@@ -69,8 +73,14 @@ export const useImagenes = () => {
     
     // Validar tipo de archivo
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
     
-    if (!allowedTypes.includes(file.type)) {
+    const typeValid = allowedTypes.includes(file.type.toLowerCase());
+    const nameValid = allowedExtensions.some(ext => 
+      file.name.toLowerCase().endsWith(ext)
+    );
+    
+    if (!typeValid || !nameValid) {
       toast.error(`Tipo de archivo no válido: ${file.type}. Solo se permiten: JPG, PNG, WEBP`);
       return false;
     }
@@ -79,11 +89,10 @@ export const useImagenes = () => {
     return true;
   }, []);
 
-  // Manejar selección de archivo de imagen - MEJORADO
+  // Manejar selección de archivo
   const handleImagenChange = useCallback((e) => {
     console.log('📁 Evento de cambio de archivo:', e.target.files);
     
-    // Limpiar estados previos
     setImagenSeleccionada(null);
     setImagenPreview(null);
     
@@ -98,7 +107,6 @@ export const useImagenes = () => {
       });
       
       if (!validarImagen(file)) {
-        // Limpiar el input si el archivo no es válido
         e.target.value = '';
         return;
       }
@@ -121,11 +129,11 @@ export const useImagenes = () => {
     }
   }, [validarImagen]);
 
-  // Subir imagen de publicidad - CORREGIDO
+  // SUBIR IMAGEN DE PUBLICIDAD - CON FETCH NATIVO
   const subirImagenPublicidad = useCallback(async (archivo = null) => {
     const archivoASubir = archivo || imagenSeleccionada;
     
-    console.log('📤 Iniciando subida de imagen:', {
+    console.log('📤 Iniciando subida de imagen con FETCH:', {
       archivoParametro: !!archivo,
       imagenSeleccionada: !!imagenSeleccionada,
       archivoASubir: !!archivoASubir
@@ -136,7 +144,6 @@ export const useImagenes = () => {
       return false;
     }
 
-    // Validar nuevamente antes de subir
     if (!validarImagen(archivoASubir)) {
       return false;
     }
@@ -144,37 +151,51 @@ export const useImagenes = () => {
     setSubiendoImagen(true);
 
     try {
-      console.log('🔄 Preparando FormData...');
+      console.log('🔄 Preparando FormData con fetch...');
       
-      // CREAR FORMDATA CORRECTAMENTE
+      // Crear FormData
       const formData = new FormData();
-      
-      // IMPORTANTE: El nombre del campo debe coincidir con el configurado en multer
       formData.append('imagen', archivoASubir, archivoASubir.name);
 
-      // Debug: Verificar FormData
+      // Debug FormData
       console.log('📋 FormData creado:');
       for (let pair of formData.entries()) {
         console.log(`  ${pair[0]}:`, pair[1]);
+        if (pair[1] instanceof File) {
+          console.log(`    - Nombre: ${pair[1].name}`);
+          console.log(`    - Tamaño: ${pair[1].size} bytes`);
+          console.log(`    - Tipo: ${pair[1].type}`);
+        }
       }
 
-      console.log('🚀 Enviando petición...');
+      console.log('🚀 Enviando petición con fetch...');
 
-      const response = await axiosAuth.post('/admin/subir-imagen-publicidad', formData, {
+      // USAR FETCH NATIVO PARA UPLOAD
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/subir-imagen-publicidad-base64`, {
+        method: 'POST',
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${getToken()}`
+          // NO incluir Content-Type - fetch lo manejará automáticamente
         },
-        // AGREGAR TIMEOUT Y CONFIGURACIONES ADICIONALES
-        timeout: 30000, // 30 segundos
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`📊 Progreso de subida: ${percentCompleted}%`);
-        }
+        body: formData
       });
 
-      console.log('📥 Respuesta recibida:', response.data);
+      console.log('📥 Respuesta fetch recibida:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
 
-      if (response.data.success) {
+      // Verificar si la respuesta es exitosa
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const resultado = await response.json();
+      console.log('📄 Datos de respuesta:', resultado);
+
+      if (resultado.success) {
         console.log('✅ Imagen de publicidad subida exitosamente');
         toast.success('Imagen de publicidad subida correctamente');
         
@@ -187,24 +208,26 @@ export const useImagenes = () => {
         
         return true;
       } else {
-        throw new Error(response.data.message || 'Error al subir imagen');
+        throw new Error(resultado.message || 'Error al subir imagen');
       }
     } catch (error) {
       console.error('❌ Error subiendo imagen de publicidad:', {
         message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        config: error.config
+        name: error.name,
+        stack: error.stack
       });
       
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else if (error.code === 'ECONNABORTED') {
-        toast.error('Tiempo de espera agotado. La imagen puede ser demasiado grande.');
-      } else if (error.message.includes('Network Error')) {
-        toast.error('Error de red. Verifique su conexión a internet.');
+      // Mensajes de error específicos
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        toast.error('Error de conexión. Verifique su internet.');
+      } else if (error.message.includes('413')) {
+        toast.error('Imagen demasiado grande para el servidor.');
+      } else if (error.message.includes('400')) {
+        toast.error('Error en el formato de la imagen. Intente con otra imagen.');
+      } else if (error.message.includes('401')) {
+        toast.error('Token de autenticación inválido. Inicie sesión nuevamente.');
       } else {
-        toast.error('Error al subir la imagen de publicidad');
+        toast.error(error.message || 'Error al subir la imagen de publicidad');
       }
       return false;
     } finally {
@@ -212,7 +235,94 @@ export const useImagenes = () => {
     }
   }, [imagenSeleccionada, cargarImagenes, validarImagen]);
 
-  // Eliminar imagen de publicidad
+  // SUBIR IMAGEN DE PRODUCTO - CON FETCH NATIVO  
+  const subirImagenProducto = useCallback(async (codigoBarra, archivo = null) => {
+    const archivoASubir = archivo || imagenSeleccionada;
+    
+    console.log('📤 Iniciando subida de imagen de producto con FETCH:', {
+      codigoBarra,
+      archivoParametro: !!archivo,
+      imagenSeleccionada: !!imagenSeleccionada,
+      archivoASubir: !!archivoASubir
+    });
+    
+    if (!archivoASubir || !codigoBarra) {
+      toast.error('Código de barra e imagen son requeridos');
+      return false;
+    }
+
+    if (!validarImagen(archivoASubir)) {
+      return false;
+    }
+
+    setSubiendoImagen(true);
+
+    try {
+      console.log(`🔄 Preparando FormData para producto: ${codigoBarra}`);
+      
+      const formData = new FormData();
+      formData.append('imagen', archivoASubir, archivoASubir.name);
+      formData.append('codigo_barra', codigoBarra);
+
+      // Debug FormData
+      console.log('📋 FormData para producto:');
+      for (let pair of formData.entries()) {
+        console.log(`  ${pair[0]}:`, pair[1]);
+      }
+
+      console.log('🚀 Enviando petición de producto con fetch...');
+
+      // USAR FETCH NATIVO PARA UPLOAD DE PRODUCTO
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/subir-imagen-producto`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getToken()}`
+          // NO incluir Content-Type
+        },
+        body: formData
+      });
+
+      console.log('📥 Respuesta fetch producto recibida:', {
+        status: response.status,
+        statusText: response.statusText
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const resultado = await response.json();
+
+      if (resultado.success) {
+        console.log(`✅ Imagen del producto ${codigoBarra} subida exitosamente`);
+        toast.success('Imagen del producto subida correctamente');
+        
+        // Limpiar selección
+        setImagenSeleccionada(null);
+        setImagenPreview(null);
+        
+        return true;
+      } else {
+        throw new Error(resultado.message || 'Error al subir imagen del producto');
+      }
+    } catch (error) {
+      console.error(`❌ Error subiendo imagen del producto ${codigoBarra}:`, error);
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        toast.error('Error de conexión. Verifique su internet.');
+      } else if (error.message.includes('413')) {
+        toast.error('Imagen demasiado grande para el servidor.');
+      } else {
+        toast.error(error.message || 'Error al subir la imagen del producto');
+      }
+      return false;
+    } finally {
+      setSubiendoImagen(false);
+    }
+  }, [imagenSeleccionada, validarImagen]);
+
+  // Eliminar imagen de publicidad (mantener con axios)
   const eliminarImagenPublicidad = useCallback(async (nombreImagen) => {
     if (!nombreImagen) {
       toast.error('Nombre de imagen requerido');
@@ -248,7 +358,7 @@ export const useImagenes = () => {
     }
   }, []);
 
-  // Verificar si existe imagen de producto
+  // Verificar si existe imagen de producto (mantener con axios)
   const verificarImagenProducto = useCallback(async (codigoBarra) => {
     if (!codigoBarra) return false;
     
@@ -275,81 +385,6 @@ export const useImagenes = () => {
     }
   }, []);
 
-  // Subir imagen de producto - CORREGIDO
-  const subirImagenProducto = useCallback(async (codigoBarra, archivo = null) => {
-    const archivoASubir = archivo || imagenSeleccionada;
-    
-    console.log('📤 Iniciando subida de imagen de producto:', {
-      codigoBarra,
-      archivoParametro: !!archivo,
-      imagenSeleccionada: !!imagenSeleccionada,
-      archivoASubir: !!archivoASubir
-    });
-    
-    if (!archivoASubir || !codigoBarra) {
-      toast.error('Código de barra e imagen son requeridos');
-      return false;
-    }
-
-    // Validar nuevamente antes de subir
-    if (!validarImagen(archivoASubir)) {
-      return false;
-    }
-
-    setSubiendoImagen(true);
-
-    try {
-      console.log(`🔄 Preparando FormData para producto: ${codigoBarra}`);
-      
-      const formData = new FormData();
-      formData.append('imagen', archivoASubir, archivoASubir.name);
-      formData.append('codigo_barra', codigoBarra);
-
-      // Debug: Verificar FormData
-      console.log('📋 FormData creado:');
-      for (let pair of formData.entries()) {
-        console.log(`  ${pair[0]}:`, pair[1]);
-      }
-
-      const response = await axiosAuth.post('/admin/subir-imagen-producto', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        timeout: 30000,
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`📊 Progreso de subida: ${percentCompleted}%`);
-        }
-      });
-
-      if (response.data.success) {
-        console.log(`✅ Imagen del producto ${codigoBarra} subida exitosamente`);
-        toast.success('Imagen del producto subida correctamente');
-        
-        // Limpiar selección
-        setImagenSeleccionada(null);
-        setImagenPreview(null);
-        
-        return true;
-      } else {
-        throw new Error(response.data.message || 'Error al subir imagen del producto');
-      }
-    } catch (error) {
-      console.error(`❌ Error subiendo imagen del producto ${codigoBarra}:`, error);
-      
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else if (error.code === 'ECONNABORTED') {
-        toast.error('Tiempo de espera agotado. La imagen puede ser demasiado grande.');
-      } else {
-        toast.error('Error al subir la imagen del producto');
-      }
-      return false;
-    } finally {
-      setSubiendoImagen(false);
-    }
-  }, [imagenSeleccionada, validarImagen]);
-
   // Limpiar estados
   const limpiarEstados = useCallback(() => {
     setImagenSeleccionada(null);
@@ -369,24 +404,6 @@ export const useImagenes = () => {
       preview: imagenPreview
     };
   }, [imagenSeleccionada, imagenPreview]);
-
-  // NUEVA FUNCIÓN: Debug para diagnosticar problemas
-  const debugSubida = useCallback(() => {
-    console.log('🐛 DEBUG INFO:');
-    console.log('- imagenSeleccionada:', imagenSeleccionada);
-    console.log('- imagenPreview:', !!imagenPreview);
-    console.log('- subiendoImagen:', subiendoImagen);
-    
-    if (imagenSeleccionada) {
-      console.log('- Detalles del archivo:', {
-        name: imagenSeleccionada.name,
-        size: imagenSeleccionada.size,
-        type: imagenSeleccionada.type,
-        lastModified: new Date(imagenSeleccionada.lastModified),
-        isFile: imagenSeleccionada instanceof File
-      });
-    }
-  }, [imagenSeleccionada, imagenPreview, subiendoImagen]);
 
   return {
     // Estados
@@ -411,7 +428,6 @@ export const useImagenes = () => {
     validarImagen,
     limpiarEstados,
     getImagenInfo,
-    debugSubida, // Nueva función para debug
     
     // Setters
     setImagenSeleccionada,
