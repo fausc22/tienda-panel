@@ -8,6 +8,7 @@ import {
   CogIcon,
   PhotoIcon,
   TagIcon,
+  BoltIcon,
   StarIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
@@ -17,12 +18,14 @@ import { useConfiguracion } from '../hooks/pagina/useConfiguracion';
 import { useImagenes } from '../hooks/pagina/useImagenes';
 import { useOfertas } from '../hooks/pagina/useOfertas';
 import { useDestacados } from '../hooks/pagina/useDestacados';
+import { useLiquidacion } from '../hooks/pagina/useLiquidacion';
 
 // Componentes
 import ConfiguracionGeneral from '../components/pagina/ConfiguracionGeneral';
 import GestionImagenes from '../components/pagina/GestionImagenes';
 import GestionOfertas from '../components/pagina/GestionOfertas';
 import GestionDestacados from '../components/pagina/GestionDestacados';
+import GestionLiquidacion from '../components/pagina/GestionLiquidacion';
 import EstadisticasPagina from '../components/pagina/EstadisticasPagina';
 import ModalProductoSelector from '../components/pagina/ModalProductoSelector';
 
@@ -40,19 +43,18 @@ function PaginaContent() {
   const imagenes = useImagenes();
   const ofertas = useOfertas();
   const destacados = useDestacados();
+  const liquidacion = useLiquidacion();
 
   // Cargar datos al montar el componente
   useEffect(() => {
     if (!authLoading && user) {
-      console.log('🔄 Usuario cargado, cargando configuración:', {
-        usuario: user.nombre || user.username,
-        rol: user.rol
-      });
+      console.log('🔄 Usuario cargado, cargando configuración');
       
       configuracion.cargarConfiguracion();
       imagenes.cargarImagenes();
       ofertas.cargarOfertas();
       destacados.cargarDestacados();
+      liquidacion.cargarLiquidacion(); // NUEVO
     }
   }, [user, authLoading]);
 
@@ -76,7 +78,7 @@ function PaginaContent() {
     return 'Buenas noches';
   };
 
-  // Configuración de las secciones
+  // Configuración de las secciones - ACTUALIZADO
   const secciones = [
     {
       id: 'configuracion',
@@ -101,8 +103,15 @@ function PaginaContent() {
       nombre: 'Productos Destacados',
       icono: StarIcon,
       descripcion: 'Gestionar productos destacados de la tienda'
+    },
+    {
+      id: 'liquidacion', // NUEVO
+      nombre: 'Productos en Liquidación',
+      icono: BoltIcon,
+      descripcion: 'Gestionar productos en liquidación con precios finales'
     }
   ];
+
 
   // Handler para agregar productos
   const handleAgregarProducto = (tipo) => {
@@ -117,6 +126,8 @@ function PaginaContent() {
       exito = await ofertas.agregarOferta(producto);
     } else if (tipo === 'destacado') {
       exito = await destacados.agregarDestacado(producto);
+    } else if (tipo === 'liquidacion') { // NUEVO
+      exito = await liquidacion.agregarLiquidacion(producto);
     }
     
     if (exito) {
@@ -147,6 +158,14 @@ function PaginaContent() {
           <GestionDestacados 
             {...destacados} 
             onAgregarProducto={() => handleAgregarProducto('destacado')}
+          />
+        );
+      
+      case 'liquidacion': // NUEVO
+        return (
+          <GestionLiquidacion 
+            {...liquidacion} 
+            onAgregarProducto={() => handleAgregarProducto('liquidacion')}
           />
         );
       
@@ -213,7 +232,6 @@ function PaginaContent() {
             </nav>
           </div>
           
-          {/* Descripción de la sección activa */}
           <div className="p-4 bg-gray-50">
             <p className="text-sm text-gray-600">
               {secciones.find(s => s.id === seccionActiva)?.descripcion}
@@ -234,9 +252,9 @@ function PaginaContent() {
         onCerrar={() => setModalProducto({ mostrar: false, tipo: null })}
         onConfirmar={handleConfirmarProducto}
         productosExistentes={
-          modalProducto.tipo === 'oferta' 
-            ? ofertas.ofertas || [] 
-            : destacados.destacados || []
+          modalProducto.tipo === 'oferta' ? ofertas.ofertas || [] 
+          : modalProducto.tipo === 'destacado' ? destacados.destacados || []
+          : liquidacion.liquidacion || [] // NUEVO
         }
       />
     </div>

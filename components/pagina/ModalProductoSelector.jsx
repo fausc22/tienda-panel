@@ -81,25 +81,31 @@ export default function ModalProductoSelector({
 
   if (!mostrar) return null;
 
-  const titulo = tipo === 'oferta' ? 'Agregar Producto a Ofertas' : 'Agregar Producto a Destacados';
-  const colorTema = tipo === 'oferta' ? 'red' : 'yellow';
+  const titulo = tipo === 'oferta' ? 'Agregar Producto a Ofertas' 
+    : tipo === 'destacado' ? 'Agregar Producto a Destacados'
+    : 'Agregar Producto a Liquidación';
+  
+  const colorTema = tipo === 'oferta' ? 'red' 
+    : tipo === 'destacado' ? 'yellow' 
+    : 'purple';
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-        {/* Header del modal */}
+        {/* Header con color dinámico */}
         <div className={`bg-${colorTema}-500 text-white p-4`}>
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">{titulo}</h2>
-            <button 
-              onClick={onCerrar}
-              className="text-white hover:text-gray-200 transition-colors"
-            >
+            <button onClick={onCerrar} className="text-white hover:text-gray-200 transition-colors">
               <XMarkIcon className="h-6 w-6" />
             </button>
           </div>
           <p className="text-sm opacity-90 mt-1">
-            Busque y seleccione un producto para agregar a {tipo}s
+            Busque y seleccione un producto para agregar a {
+              tipo === 'oferta' ? 'ofertas' 
+              : tipo === 'destacado' ? 'destacados' 
+              : 'liquidación'
+            }
           </p>
         </div>
         
@@ -277,7 +283,12 @@ export default function ModalProductoSelector({
             >
               {!productoSeleccionado 
                 ? 'Seleccione un producto' 
-                : `Agregar a ${tipo === 'oferta' ? 'Ofertas' : 'Destacados'}`
+                : `Agregar a ${
+                    tipo === 'oferta' ? 'Ofertas' 
+                    : tipo === 'destacado' ? 'Destacados'
+                    : tipo === 'liquidacion' ? 'Liquidación'  // NUEVO
+                    : 'Lista'
+                  }`
               }
             </button>
           </div>

@@ -5,7 +5,7 @@ import { axiosAuth } from '../../utils/apiClient';
 
 export const useImagenes = () => {
   const [imagenesPublicidad, setImagenesPublicidad] = useState([]);
-  const [imagenSeleccionada, setImagenSeleccionada] = useState(null);
+  const [imagenSeleccionada, setImagenSeleccionada] = useState();
   const [imagenPreview, setImagenPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [subiendoImagen, setSubiendoImagen] = useState(false);
@@ -131,196 +131,149 @@ export const useImagenes = () => {
 
   // SUBIR IMAGEN DE PUBLICIDAD - CON FETCH NATIVO
   const subirImagenPublicidad = useCallback(async (archivo = null) => {
-    const archivoASubir = archivo || imagenSeleccionada;
+  const archivoASubir = archivo || imagenSeleccionada;
+  
+  console.log('📤 Iniciando subida de imagen con BASE64:', {
+    archivoParametro: !!archivo,
+    imagenSeleccionada: !!imagenSeleccionada,
+    archivoASubir: !!archivoASubir
+  });
+  
+  if (!archivoASubir) {
+    toast.error('Seleccione una imagen para subir');
+    return false;
+  }
+
+  if (!validarImagen(archivoASubir)) {
+    return false;
+  }
+
+  setSubiendoImagen(true);
+
+  try {
+    console.log('🔄 Convirtiendo imagen a Base64...');
     
-    console.log('📤 Iniciando subida de imagen con FETCH:', {
-      archivoParametro: !!archivo,
-      imagenSeleccionada: !!imagenSeleccionada,
-      archivoASubir: !!archivoASubir
+    // ✅ CAMBIO 1: Convertir a Base64 en lugar de FormData
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(archivoASubir);
     });
+
+    console.log('✅ Imagen convertida a Base64');
+
+    // ✅ CAMBIO 2: Crear payload JSON en lugar de FormData
+    const payload = {
+      imagen: base64,
+      nombreArchivo: archivoASubir.name,
+      tipoArchivo: archivoASubir.type,
+      tamaño: archivoASubir.size
+    };
+
+    console.log('🚀 Enviando petición con JSON...');
+
+    // ✅ CAMBIO 3: Usar axiosAuth con JSON
+    const response = await axiosAuth.post('/admin/subir-imagen-publicidad-base64', payload);
+
+    console.log('📥 Respuesta recibida:', response.data);
+
+    if (response.data.success) {
+      console.log('✅ Imagen de publicidad subida exitosamente');
+      toast.success('Imagen de publicidad subida correctamente');
+      
+      await cargarImagenes();
+      setImagenSeleccionada(null);
+      setImagenPreview(null);
+      
+      return true;
+    } else {
+      throw new Error(response.data.message || 'Error al subir imagen');
+    }
+  } catch (error) {
+    console.error('❌ Error subiendo imagen de publicidad:', error);
     
-    if (!archivoASubir) {
-      toast.error('Seleccione una imagen para subir');
-      return false;
+    if (error.response?.status === 413) {
+      toast.error('Imagen demasiado grande para el servidor.');
+    } else if (error.response?.status === 400) {
+      toast.error(error.response?.data?.message || 'Formato de imagen no válido.');
+    } else if (error.response?.status === 401) {
+      toast.error('Sesión expirada. Inicie sesión nuevamente.');
+    } else {
+      toast.error(error.response?.data?.message || error.message || 'Error al subir la imagen');
     }
-
-    if (!validarImagen(archivoASubir)) {
-      return false;
-    }
-
-    setSubiendoImagen(true);
-
-    try {
-      console.log('🔄 Preparando FormData con fetch...');
-      
-      // Crear FormData
-      const formData = new FormData();
-      formData.append('imagen', archivoASubir, archivoASubir.name);
-
-      // Debug FormData
-      console.log('📋 FormData creado:');
-      for (let pair of formData.entries()) {
-        console.log(`  ${pair[0]}:`, pair[1]);
-        if (pair[1] instanceof File) {
-          console.log(`    - Nombre: ${pair[1].name}`);
-          console.log(`    - Tamaño: ${pair[1].size} bytes`);
-          console.log(`    - Tipo: ${pair[1].type}`);
-        }
-      }
-
-      console.log('🚀 Enviando petición con fetch...');
-
-      // USAR FETCH NATIVO PARA UPLOAD
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/subir-imagen-publicidad-base64`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getToken()}`
-          // NO incluir Content-Type - fetch lo manejará automáticamente
-        },
-        body: formData
-      });
-
-      console.log('📥 Respuesta fetch recibida:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      // Verificar si la respuesta es exitosa
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const resultado = await response.json();
-      console.log('📄 Datos de respuesta:', resultado);
-
-      if (resultado.success) {
-        console.log('✅ Imagen de publicidad subida exitosamente');
-        toast.success('Imagen de publicidad subida correctamente');
-        
-        // Recargar imágenes
-        await cargarImagenes();
-        
-        // Limpiar selección
-        setImagenSeleccionada(null);
-        setImagenPreview(null);
-        
-        return true;
-      } else {
-        throw new Error(resultado.message || 'Error al subir imagen');
-      }
-    } catch (error) {
-      console.error('❌ Error subiendo imagen de publicidad:', {
-        message: error.message,
-        name: error.name,
-        stack: error.stack
-      });
-      
-      // Mensajes de error específicos
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        toast.error('Error de conexión. Verifique su internet.');
-      } else if (error.message.includes('413')) {
-        toast.error('Imagen demasiado grande para el servidor.');
-      } else if (error.message.includes('400')) {
-        toast.error('Error en el formato de la imagen. Intente con otra imagen.');
-      } else if (error.message.includes('401')) {
-        toast.error('Token de autenticación inválido. Inicie sesión nuevamente.');
-      } else {
-        toast.error(error.message || 'Error al subir la imagen de publicidad');
-      }
-      return false;
-    } finally {
-      setSubiendoImagen(false);
-    }
+    return false;
+  } finally {
+    setSubiendoImagen(false);
+  }
   }, [imagenSeleccionada, cargarImagenes, validarImagen]);
 
   // SUBIR IMAGEN DE PRODUCTO - CON FETCH NATIVO  
   const subirImagenProducto = useCallback(async (codigoBarra, archivo = null) => {
-    const archivoASubir = archivo || imagenSeleccionada;
+  const archivoASubir = archivo || imagenSeleccionada;
+  
+  console.log('📤 Iniciando subida de imagen de producto con BASE64:', {
+    codigoBarra,
+    archivoParametro: !!archivo,
+    imagenSeleccionada: !!imagenSeleccionada
+  });
+  
+  if (!archivoASubir || !codigoBarra) {
+    toast.error('Código de barra e imagen son requeridos');
+    return false;
+  }
+
+  if (!validarImagen(archivoASubir)) {
+    return false;
+  }
+
+  setSubiendoImagen(true);
+
+  try {
+    console.log('🔄 Convirtiendo imagen de producto a Base64...');
     
-    console.log('📤 Iniciando subida de imagen de producto con FETCH:', {
-      codigoBarra,
-      archivoParametro: !!archivo,
-      imagenSeleccionada: !!imagenSeleccionada,
-      archivoASubir: !!archivoASubir
+    // Convertir a Base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(archivoASubir);
     });
-    
-    if (!archivoASubir || !codigoBarra) {
-      toast.error('Código de barra e imagen son requeridos');
-      return false;
-    }
 
-    if (!validarImagen(archivoASubir)) {
-      return false;
-    }
+    console.log('✅ Imagen convertida a Base64');
 
-    setSubiendoImagen(true);
+    // Crear payload JSON
+    const payload = {
+      imagen: base64,
+      codigo_barra: codigoBarra,
+      nombreArchivo: archivoASubir.name,
+      tipoArchivo: archivoASubir.type
+    };
 
-    try {
-      console.log(`🔄 Preparando FormData para producto: ${codigoBarra}`);
+    console.log('🚀 Enviando imagen de producto...');
+
+    // Usar axiosAuth con JSON
+    const response = await axiosAuth.post('/admin/subir-imagen-producto-base64', payload);
+
+    if (response.data.success) {
+      console.log(`✅ Imagen del producto ${codigoBarra} subida exitosamente`);
+      toast.success('Imagen del producto subida correctamente');
       
-      const formData = new FormData();
-      formData.append('imagen', archivoASubir, archivoASubir.name);
-      formData.append('codigo_barra', codigoBarra);
-
-      // Debug FormData
-      console.log('📋 FormData para producto:');
-      for (let pair of formData.entries()) {
-        console.log(`  ${pair[0]}:`, pair[1]);
-      }
-
-      console.log('🚀 Enviando petición de producto con fetch...');
-
-      // USAR FETCH NATIVO PARA UPLOAD DE PRODUCTO
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/subir-imagen-producto`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getToken()}`
-          // NO incluir Content-Type
-        },
-        body: formData
-      });
-
-      console.log('📥 Respuesta fetch producto recibida:', {
-        status: response.status,
-        statusText: response.statusText
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const resultado = await response.json();
-
-      if (resultado.success) {
-        console.log(`✅ Imagen del producto ${codigoBarra} subida exitosamente`);
-        toast.success('Imagen del producto subida correctamente');
-        
-        // Limpiar selección
-        setImagenSeleccionada(null);
-        setImagenPreview(null);
-        
-        return true;
-      } else {
-        throw new Error(resultado.message || 'Error al subir imagen del producto');
-      }
-    } catch (error) {
-      console.error(`❌ Error subiendo imagen del producto ${codigoBarra}:`, error);
+      setImagenSeleccionada(null);
+      setImagenPreview(null);
       
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        toast.error('Error de conexión. Verifique su internet.');
-      } else if (error.message.includes('413')) {
-        toast.error('Imagen demasiado grande para el servidor.');
-      } else {
-        toast.error(error.message || 'Error al subir la imagen del producto');
-      }
-      return false;
-    } finally {
-      setSubiendoImagen(false);
+      return true;
+    } else {
+      throw new Error(response.data.message || 'Error al subir imagen del producto');
     }
-  }, [imagenSeleccionada, validarImagen]);
+  } catch (error) {
+    console.error(`❌ Error subiendo imagen del producto ${codigoBarra}:`, error);
+    toast.error(error.response?.data?.message || error.message || 'Error al subir la imagen del producto');
+    return false;
+  } finally {
+    setSubiendoImagen(false);
+  }
+}, [imagenSeleccionada, validarImagen]);
 
   // Eliminar imagen de publicidad (mantener con axios)
   const eliminarImagenPublicidad = useCallback(async (nombreImagen) => {
@@ -429,8 +382,8 @@ export const useImagenes = () => {
     limpiarEstados,
     getImagenInfo,
     
-    // Setters
-    setImagenSeleccionada,
-    setImagenPreview
+    // // Setters
+    // setImagenSeleccionada,
+    // setImagenPreview
   };
 };

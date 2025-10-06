@@ -178,6 +178,7 @@ export default function GestionOfertas({
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                     Descuento
                   </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Stock</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
                     Acciones
                   </th>
@@ -253,6 +254,13 @@ export default function GestionOfertas({
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        oferta.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {oferta.stock || 0}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleAbrirModalDescuento(oferta)}
@@ -296,6 +304,7 @@ export default function GestionOfertas({
                   <div>
                     <p className="text-xs text-gray-500">Precio Original</p>
                     <p className="font-medium">${oferta.precio.toFixed(2)}</p>
+                    <p className="font-medium">STOCK: {oferta.stock || 0}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Precio Oferta</p>
