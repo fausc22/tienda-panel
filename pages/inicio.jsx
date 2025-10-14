@@ -175,7 +175,7 @@ function InicioContent() {
   useEffect(() => {
     if (!authLoading && user) {
       console.log('🔄 Iniciando monitoreo de nuevos pedidos');
-      iniciarMonitoreo(15000);
+      iniciarMonitoreo(60000);
       
       return () => {
         console.log('🧹 Limpiando monitoreo y deteniendo audio...');

@@ -573,40 +573,32 @@ const enviarEmailEnCamino = useCallback(async (horarioDesde, horarioHasta) => {
   // ==============================================
   
   const verificarStock = useCallback(async (codigoBarra) => {
-    if (!codigoBarra || typeof codigoBarra !== 'string') {
-      console.warn('⚠️ Código de barra inválido para verificar stock:', codigoBarra);
-      return 0;
-    }
-    
-    try {
-      console.log(`🔍 Verificando stock para código: ${codigoBarra}`);
+      if (!codigoBarra || typeof codigoBarra !== 'string') {
+        console.warn('⚠️ Código de barra inválido para verificar stock:', codigoBarra);
+        return 0;
+      }
       
-      const response = await axiosAuth.get(`/admin/productos/${encodeURIComponent(codigoBarra)}`);
-      
-      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-        const producto = response.data.find(p => p.codigo_barra === codigoBarra);
-        const stock = parseInt(producto?.stock) || 0;
+      try {
+        console.log(`🔍 Verificando stock para código: ${codigoBarra}`);
         
-        console.log(`📦 Stock encontrado para ${codigoBarra}: ${stock}`);
-        return stock;
-      } else if (response.data && typeof response.data === 'object' && 'stock' in response.data) {
-        const stock = parseInt(response.data.stock) || 0;
-        console.log(`📦 Stock encontrado para ${codigoBarra}: ${stock}`);
-        return stock;
-      } else {
-        console.warn(`⚠️ No se encontró stock para código: ${codigoBarra}`);
+        const response = await axiosAuth.get(`/admin/productos/${encodeURIComponent(codigoBarra)}`); // ✅ YA USA EL ENDPOINT CORRECTO
+        
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+          const producto = response.data.find(p => p.codigo_barra === codigoBarra);
+          const stock = parseInt(producto?.stock) || 0;
+          
+          console.log(`📦 Stock encontrado para ${codigoBarra}: ${stock}`);
+          console.log(`💰 Precio calculado del producto: ${producto?.precio}`); // ✅ ESTE YA ES EL PRECIO CORRECTO
+          return stock;
+        } else {
+          console.warn(`⚠️ No se encontró stock para código: ${codigoBarra}`);
+          return 0;
+        }
+      } catch (error) {
+        console.error(`❌ Error verificando stock para ${codigoBarra}:`, error);
         return 0;
       }
-    } catch (error) {
-      if (error.response?.status === 404) {
-        console.warn(`⚠️ Producto no encontrado: ${codigoBarra}`);
-        return 0;
-      }
-      
-      console.error(`❌ Error verificando stock para ${codigoBarra}:`, error);
-      return 0;
-    }
-  }, []);
+    }, []);
 
   const calcularTotales = useCallback((productosParam = null) => {
     const productosACalcular = productosParam || productos;

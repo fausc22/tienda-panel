@@ -1,4 +1,4 @@
-// hooks/pedidos/useNotificacionPedidos.js - VERSIÓN MEJORADA CON TÍTULO Y AUDIO
+// hooks/pedidos/useNotificacionPedidos.js - VERSIÓN CORREGIDA
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { axiosAuth } from '../../utils/apiClient';
 
@@ -9,11 +9,14 @@ export const useNotificacionesPedidos = () => {
   const [mostrarNotificacion, setMostrarNotificacion] = useState(false);
   const [sonidoHabilitado, setSonidoHabilitado] = useState(false);
   const [audioListo, setAudioListo] = useState(false);
+  
+  // ✅ USAR REF PARA EVITAR RECREACIÓN DE FUNCIONES
   const intervalRef = useRef(null);
   const audioRef = useRef(null);
-  const parpadeadorRef = useRef(null); // NUEVO: Para controlar parpadeo del título
+  const parpadeadorRef = useRef(null);
+  const pedidosAnterioresRef = useRef([]); // 🆕 REF PARA PEDIDOS
 
-  // NUEVO: Verificar si audio está habilitado al cargar
+  // Verificar audio habilitado al cargar
   useEffect(() => {
     const audioHabilitado = localStorage.getItem('audio_habilitado') === 'true';
     setSonidoHabilitado(audioHabilitado);
@@ -51,7 +54,6 @@ export const useNotificacionesPedidos = () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
-      // NUEVO: Limpiar parpadeo del título
       if (parpadeadorRef.current) {
         clearInterval(parpadeadorRef.current);
         document.title = 'PANEL ADMIN | INICIO - PUNTOSUR';
@@ -59,16 +61,20 @@ export const useNotificacionesPedidos = () => {
     };
   }, []);
 
-  // NUEVO: Función para habilitar notificaciones (usuario debe hacer clic)
+  // 🆕 SINCRONIZAR REF CON STATE
+  useEffect(() => {
+    pedidosAnterioresRef.current = pedidosAnteriores;
+  }, [pedidosAnteriores]);
+
   const habilitarNotificaciones = useCallback(async () => {
     try {
       console.log('🔓 Habilitando notificaciones...');
       
       if (audioRef.current) {
-        audioRef.current.volume = 0.01; // Casi silencioso
+        audioRef.current.volume = 0.01;
         await audioRef.current.play();
         audioRef.current.pause();
-        audioRef.current.volume = 0.8; // Restaurar volumen
+        audioRef.current.volume = 0.8;
         audioRef.current.currentTime = 0;
       }
       
@@ -82,9 +88,7 @@ export const useNotificacionesPedidos = () => {
     }
   }, []);
 
-  // NUEVO: Iniciar parpadeo del título
   const iniciarParpadeorTitulo = useCallback((pedido) => {
-    // Limpiar parpadeo anterior si existe
     if (parpadeadorRef.current) {
       clearInterval(parpadeadorRef.current);
     }
@@ -93,10 +97,8 @@ export const useNotificacionesPedidos = () => {
     const tituloAlerta = `🚨 NUEVO PEDIDO #${pedido.id_pedido} - PUNTOSUR`;
     let parpadeando = true;
 
-    // Cambiar título inmediatamente
     document.title = tituloAlerta;
 
-    // Iniciar parpadeo
     parpadeadorRef.current = setInterval(() => {
       document.title = parpadeando ? tituloAlerta : tituloOriginal;
       parpadeando = !parpadeando;
@@ -105,7 +107,6 @@ export const useNotificacionesPedidos = () => {
     console.log(`📋 Iniciado parpadeo del título para pedido #${pedido.id_pedido}`);
   }, []);
 
-  // NUEVO: Detener parpadeo del título
   const detenerParpadeorTitulo = useCallback(() => {
     if (parpadeadorRef.current) {
       clearInterval(parpadeadorRef.current);
@@ -115,7 +116,6 @@ export const useNotificacionesPedidos = () => {
     console.log('⏹️ Parpadeo del título detenido');
   }, []);
 
-  // Función para reproducir sonido
   const reproducirSonidoNotificacion = useCallback(async () => {
     if (!sonidoHabilitado || !audioListo || !audioRef.current) {
       console.log('🔇 Sonido no habilitado o no disponible');
@@ -137,7 +137,6 @@ export const useNotificacionesPedidos = () => {
     return false;
   }, [sonidoHabilitado, audioListo]);
 
-  // Función para detener sonido
   const detenerSonidoNotificacion = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -146,7 +145,7 @@ export const useNotificacionesPedidos = () => {
     }
   }, []);
 
-  // Función para checkear nuevos pedidos - MODIFICADA
+  // ✅ FUNCIÓN ESTABLE QUE NO DEPENDE DE STATE
   const checkearNuevosPedidos = useCallback(async () => {
     try {
       const response = await axiosAuth.get('/admin/pedidos-pendientes-check');
@@ -154,13 +153,16 @@ export const useNotificacionesPedidos = () => {
       if (response.data && Array.isArray(response.data)) {
         const pedidosActuales = response.data;
         
-        if (pedidosAnteriores.length === 0) {
+        // ✅ USAR REF EN LUGAR DE STATE
+        const pedidosAnterioresActual = pedidosAnterioresRef.current;
+        
+        if (pedidosAnterioresActual.length === 0) {
           setPedidosAnteriores(pedidosActuales);
           setUltimoCheckeo(new Date());
           return;
         }
 
-        const idsAnteriores = pedidosAnteriores.map(p => p.id_pedido);
+        const idsAnteriores = pedidosAnterioresActual.map(p => p.id_pedido);
         const pedidosNuevos = pedidosActuales.filter(p => !idsAnteriores.includes(p.id_pedido));
         
         if (pedidosNuevos.length > 0) {
@@ -170,10 +172,10 @@ export const useNotificacionesPedidos = () => {
           setNuevoPedido(pedidoNuevo);
           setMostrarNotificacion(true);
           
-          // 🔔 INICIAR PARPADEO DEL TÍTULO (SIEMPRE FUNCIONA)
+          // Iniciar parpadeo del título
           iniciarParpadeorTitulo(pedidoNuevo);
           
-          // 🎵 INTENTAR REPRODUCIR SONIDO (SI ESTÁ HABILITADO)
+          // Reproducir sonido
           setTimeout(async () => {
             const audioIniciado = await reproducirSonidoNotificacion();
             console.log(`🔊 Audio: ${audioIniciado ? 'SÍ' : 'NO'}`);
@@ -187,22 +189,30 @@ export const useNotificacionesPedidos = () => {
     } catch (error) {
       console.error('❌ Error chequeando pedidos:', error);
     }
-  }, [pedidosAnteriores, iniciarParpadeorTitulo, reproducirSonidoNotificacion]);
+  }, [iniciarParpadeorTitulo, reproducirSonidoNotificacion]);
+  // ✅ SOLO DEPENDENCIAS ESTABLES
 
-  // Iniciar monitoreo
-  const iniciarMonitoreo = useCallback((intervalo = 10000) => {
+  // ✅ INICIAR MONITOREO CON DEPENDENCIAS CORRECTAS
+  const iniciarMonitoreo = useCallback((intervalo = 60000) => {
     console.log(`🔄 Iniciando monitoreo (cada ${intervalo/1000}s)`);
     
-    checkearNuevosPedidos();
-    
+    // Limpiar intervalo anterior si existe
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
     
-    intervalRef.current = setInterval(checkearNuevosPedidos, intervalo);
-  }, [checkearNuevosPedidos]);
+    // Ejecutar inmediatamente
+    checkearNuevosPedidos();
+    
+    // Configurar intervalo
+    intervalRef.current = setInterval(() => {
+      console.log('⏰ Ejecutando checkeo programado...');
+      checkearNuevosPedidos();
+    }, intervalo);
+    
+    console.log('✅ Monitoreo iniciado correctamente');
+  }, [checkearNuevosPedidos]); // ✅ AHORA checkearNuevosPedidos ES ESTABLE
 
-  // Detener monitoreo
   const detenerMonitoreo = useCallback(() => {
     console.log('⏹️ Deteniendo monitoreo');
     if (intervalRef.current) {
@@ -210,15 +220,14 @@ export const useNotificacionesPedidos = () => {
       intervalRef.current = null;
     }
     detenerSonidoNotificacion();
-    detenerParpadeorTitulo(); // NUEVO
+    detenerParpadeorTitulo();
   }, [detenerSonidoNotificacion, detenerParpadeorTitulo]);
 
-  // Cerrar notificación - MODIFICADA
   const cerrarNotificacion = useCallback(() => {
     console.log('❌ Cerrando notificación...');
     
     detenerSonidoNotificacion();
-    detenerParpadeorTitulo(); // NUEVO: Detener parpadeo
+    detenerParpadeorTitulo();
     setMostrarNotificacion(false);
     setNuevoPedido(null);
     
@@ -228,20 +237,15 @@ export const useNotificacionesPedidos = () => {
   }, [detenerSonidoNotificacion, detenerParpadeorTitulo]);
 
   return {
-    // Estados
     ultimoCheckeo,
     nuevoPedido,
     mostrarNotificacion,
     sonidoHabilitado,
     audioListo,
-    
-    // Funciones
     iniciarMonitoreo,
     detenerMonitoreo,
     cerrarNotificacion,
     detenerSonido: detenerSonidoNotificacion,
-    
-    // NUEVAS funciones
     habilitarNotificaciones
   };
 };
