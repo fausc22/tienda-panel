@@ -1,16 +1,15 @@
-// pages/pagina.jsx - Página de configuración de la tienda
+// pages/pagina.jsx - ACTUALIZACIÓN
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useProtectedPage } from '../hooks/useAuthRedirect';
 import { useAuth } from '../context/AuthContext';
-import { toast } from 'react-hot-toast';
 import { 
   CogIcon,
   PhotoIcon,
   TagIcon,
   BoltIcon,
   StarIcon,
-  PlusIcon
+  ClockIcon // 🆕 NUEVO
 } from '@heroicons/react/24/outline';
 
 // Hooks personalizados
@@ -19,6 +18,7 @@ import { useImagenes } from '../hooks/pagina/useImagenes';
 import { useOfertas } from '../hooks/pagina/useOfertas';
 import { useDestacados } from '../hooks/pagina/useDestacados';
 import { useLiquidacion } from '../hooks/pagina/useLiquidacion';
+import { useHorariosAvanzado } from '../hooks/pagina/useHorariosAvanzado'; // 🆕 NUEVO
 
 // Componentes
 import ConfiguracionGeneral from '../components/pagina/ConfiguracionGeneral';
@@ -26,15 +26,14 @@ import GestionImagenes from '../components/pagina/GestionImagenes';
 import GestionOfertas from '../components/pagina/GestionOfertas';
 import GestionDestacados from '../components/pagina/GestionDestacados';
 import GestionLiquidacion from '../components/pagina/GestionLiquidacion';
+import GestionHorarios from '../components/pagina/GestionHorarios'; // 🆕 NUEVO
 import EstadisticasPagina from '../components/pagina/EstadisticasPagina';
 import ModalProductoSelector from '../components/pagina/ModalProductoSelector';
 
 function PaginaContent() {
-  // Hook de autenticación y protección
   const { isLoading: authLoading } = useProtectedPage();
   const { user } = useAuth();
 
-  // Estados para controlar qué sección mostrar
   const [seccionActiva, setSeccionActiva] = useState('configuracion');
   const [modalProducto, setModalProducto] = useState({ mostrar: false, tipo: null });
 
@@ -44,6 +43,7 @@ function PaginaContent() {
   const ofertas = useOfertas();
   const destacados = useDestacados();
   const liquidacion = useLiquidacion();
+  const horariosAvanzado = useHorariosAvanzado(); // 🆕 NUEVO
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -54,11 +54,11 @@ function PaginaContent() {
       imagenes.cargarImagenes();
       ofertas.cargarOfertas();
       destacados.cargarDestacados();
-      liquidacion.cargarLiquidacion(); // NUEVO
+      liquidacion.cargarLiquidacion();
+      horariosAvanzado.cargarHorarios(); // 🆕 NUEVO
     }
   }, [user, authLoading]);
 
-  // Mostrar loading mientras se autentica
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -70,7 +70,6 @@ function PaginaContent() {
     );
   }
 
-  // Función para obtener el saludo dinámico
   const getSaludo = () => {
     const hora = new Date().getHours();
     if (hora < 12) return 'Buenos días';
@@ -78,13 +77,19 @@ function PaginaContent() {
     return 'Buenas noches';
   };
 
-  // Configuración de las secciones - ACTUALIZADO
+  // Configuración de las secciones - 🆕 ACTUALIZADO
   const secciones = [
     {
       id: 'configuracion',
       nombre: 'Configuración General',
       icono: CogIcon,
       descripcion: 'Configuraciones básicas de la tienda'
+    },
+    {
+      id: 'horarios', // 🆕 NUEVO
+      nombre: 'Horarios de Atención',
+      icono: ClockIcon,
+      descripcion: 'Configure horarios por día y excepciones especiales'
     },
     {
       id: 'imagenes',
@@ -105,20 +110,17 @@ function PaginaContent() {
       descripcion: 'Gestionar productos destacados de la tienda'
     },
     {
-      id: 'liquidacion', // NUEVO
+      id: 'liquidacion',
       nombre: 'Productos en Liquidación',
       icono: BoltIcon,
       descripcion: 'Gestionar productos en liquidación con precios finales'
     }
   ];
 
-
-  // Handler para agregar productos
   const handleAgregarProducto = (tipo) => {
     setModalProducto({ mostrar: true, tipo });
   };
 
-  // Handler para confirmar selección de producto
   const handleConfirmarProducto = async (producto, tipo) => {
     let exito = false;
     
@@ -126,21 +128,23 @@ function PaginaContent() {
       exito = await ofertas.agregarOferta(producto);
     } else if (tipo === 'destacado') {
       exito = await destacados.agregarDestacado(producto);
-    } else if (tipo === 'liquidacion') { // NUEVO
+    } else if (tipo === 'liquidacion') {
       exito = await liquidacion.agregarLiquidacion(producto);
     }
     
     if (exito) {
       setModalProducto({ mostrar: false, tipo: null });
-      toast.success(`Producto agregado a ${tipo}s exitosamente`);
     }
   };
 
-  // Renderizar contenido según la sección activa
+  // Renderizar contenido según la sección activa - 🆕 ACTUALIZADO
   const renderizarContenido = () => {
     switch (seccionActiva) {
       case 'configuracion':
         return <ConfiguracionGeneral {...configuracion} />;
+      
+      case 'horarios': // 🆕 NUEVO
+        return <GestionHorarios {...horariosAvanzado} />;
       
       case 'imagenes':
         return <GestionImagenes {...imagenes} />;
@@ -161,7 +165,7 @@ function PaginaContent() {
           />
         );
       
-      case 'liquidacion': // NUEVO
+      case 'liquidacion':
         return (
           <GestionLiquidacion 
             {...liquidacion} 
@@ -198,7 +202,6 @@ function PaginaContent() {
             </div>
           </div>
 
-          {/* Estadísticas rápidas */}
           <EstadisticasPagina 
             totalOfertas={ofertas.ofertas?.length || 0}
             totalDestacados={destacados.destacados?.length || 0}
@@ -254,7 +257,7 @@ function PaginaContent() {
         productosExistentes={
           modalProducto.tipo === 'oferta' ? ofertas.ofertas || [] 
           : modalProducto.tipo === 'destacado' ? destacados.destacados || []
-          : liquidacion.liquidacion || [] // NUEVO
+          : liquidacion.liquidacion || []
         }
       />
     </div>

@@ -5,13 +5,15 @@ import {
   InformationCircleIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 export default function ConfiguracionGeneral({
   configuracion,
   loading,
   guardando,
+   cargarConfiguracion,
   guardarConfiguracion,
   actualizarCampo,
   validarConfiguracion,
@@ -305,88 +307,75 @@ export default function ConfiguracionGeneral({
           </div>
         </div>
 
-        {/* Estado de la Página */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Estado de la Página
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado Actual
-              </label>
-              <select
-                value={formData.pageStatus || 'ACTIVA'}
-                onChange={(e) => handleCampoChange('pageStatus', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="ACTIVA">Activa - Tienda Online Funcionando</option>
-                <option value="MANTENIMIENTO">Mantenimiento - Tienda Temporalmente Cerrada</option>
-                <option value="INACTIVA">Inactiva - Tienda Cerrada</option>
-              </select>
-            </div>
+       {/* Estado de la Tienda */}
+<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+  <div className="flex items-center gap-3 mb-4">
+    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+      <ClockIcon className="h-6 w-6 text-purple-600" />
+    </div>
+    <div>
+      <h3 className="text-lg font-semibold text-gray-900">Estado de la Tienda</h3>
+      <p className="text-sm text-gray-600">
+        Configure si la tienda está activa o inactiva
+      </p>
+    </div>
+  </div>
 
-            <div className="flex items-center">
-              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                formData.pageStatus === 'ACTIVA' ? 'bg-green-100 text-green-800' :
-                formData.pageStatus === 'MANTENIMIENTO' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {formData.pageStatus === 'ACTIVA' && <CheckCircleIcon className="w-4 h-4 mr-1" />}
-                {formData.pageStatus === 'MANTENIMIENTO' && <ArrowPathIcon className="w-4 h-4 mr-1" />}
-                {formData.pageStatus === 'INACTIVA' && <ExclamationTriangleIcon className="w-4 h-4 mr-1" />}
-                
-                {formData.pageStatus === 'ACTIVA' ? 'Tienda Activa' :
-                 formData.pageStatus === 'MANTENIMIENTO' ? 'En Mantenimiento' :
-                 'Tienda Inactiva'}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-4">
-                HORARIOS
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">INICIO</label>
-                  <select
-                    value={formData.horaInicio || '08:00'}
-                    onChange={(e) => handleCampoChange('horaInicio', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  >
-                    {Array.from({ length: 24 }, (_, i) => {
-                      const hour = i.toString().padStart(2, '0');
-                      return (
-                        <option key={hour} value={`${hour}:00`}>
-                          {hour}:00
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">FIN</label>
-                  <select
-                    value={formData.horaFin || '22:00'}
-                    onChange={(e) => handleCampoChange('horaFin', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  >
-                    {Array.from({ length: 24 }, (_, i) => {
-                      const hour = i.toString().padStart(2, '0');
-                      return (
-                        <option key={hour} value={`${hour}:00`}>
-                          {hour}:00
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
+  {/* 🆕 VALIDACIÓN AGREGADA */}
+  {loading ? (
+    <div className="flex justify-center items-center py-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      <span className="ml-3 text-gray-600">Cargando configuración...</span>
+    </div>
+  ) : !configuracion ? (
+    <div className="text-center py-8">
+      <p className="text-red-600 mb-2">⚠️ Error cargando configuración</p>
+      <button
+        onClick={cargarConfiguracion}
+        className="text-blue-600 hover:text-blue-800 font-medium"
+      >
+        Reintentar
+      </button>
+    </div>
+  ) : (
+    <div className="space-y-4">
+      {/* Toggle Estado */}
+      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+        <div className="flex-1">
+          <label className="font-medium text-gray-900 mb-1 block">
+            Estado General
+          </label>
+          <p className="text-sm text-gray-600">
+            {(formData.pageStatus || 'ACTIVA') === 'ACTIVA' 
+              ? '🟢 La tienda está activa y funcionando normalmente'
+              : '🔴 La tienda está inactiva - No se permiten pedidos'
+            }
+          </p>
         </div>
+        <div className="flex items-center gap-3">
+          <span className={`text-sm font-medium ${
+            (formData.pageStatus || 'ACTIVA') === 'ACTIVA' ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {formData.pageStatus || 'ACTIVA'}
+          </span>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={(formData.pageStatus || 'ACTIVA') === 'ACTIVA'}
+              onChange={(e) => handleCampoChange('pageStatus', e.target.checked ? 'ACTIVA' : 'INACTIVA')}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+          </label>
+        </div>
+      </div>
+
+      
+
+      
+    </div>
+  )}
+</div>
 
         {/* Credenciales de Administrador */}
         <div className="bg-red-50 border border-red-200 p-6 rounded-lg">

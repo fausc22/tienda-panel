@@ -1,4 +1,4 @@
-// hooks/pagina/useConfiguracion.js - Hook para gestión de configuración
+// hooks/pagina/useConfiguracion.js - VERSIÓN CORREGIDA
 import { useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { axiosAuth } from '../../utils/apiClient';
@@ -17,17 +17,65 @@ export const useConfiguracion = () => {
       
       const response = await axiosAuth.get('/admin/getConfig');
       
-      if (response.data) {
-        setConfiguracion(response.data);
-        console.log('✅ Configuración cargada exitosamente');
+      // 🆕 FIX: Extraer data correctamente
+      if (response.data && response.data.success) {
+        const config = response.data.data || response.data;
+        
+        // 🆕 ASEGURAR QUE pageStatus SIEMPRE EXISTA
+        const configuracionCompleta = {
+          ...config,
+          pageStatus: config.pageStatus || 'ACTIVA' // ← DEFAULT
+        };
+        
+        setConfiguracion(configuracionCompleta);
+        console.log('✅ Configuración cargada exitosamente:', configuracionCompleta);
+      } else if (response.data) {
+        // Si no tiene estructura success/data, usar directamente
+        const configuracionCompleta = {
+          ...response.data,
+          pageStatus: response.data.pageStatus || 'ACTIVA'
+        };
+        
+        setConfiguracion(configuracionCompleta);
+        console.log('✅ Configuración cargada (formato alternativo):', configuracionCompleta);
       } else {
         console.warn('⚠️ Respuesta inesperada de configuración:', response.data);
-        setConfiguracion(null);
+        
+        // 🆕 CONFIGURACIÓN POR DEFECTO
+        const configuracionPorDefecto = {
+          storeName: '',
+          storeAddress: '',
+          storePhone: '',
+          storeDescription: '',
+          storeInstagram: '',
+          storeEmail: '',
+          storeDeliveryBase: '0',
+          storeDeliveryKm: '0',
+          iva: '0',
+          pageStatus: 'ACTIVA' // ← DEFAULT
+        };
+        
+        setConfiguracion(configuracionPorDefecto);
       }
     } catch (error) {
       console.error('❌ Error cargando configuración:', error);
       toast.error('Error al cargar la configuración');
-      setConfiguracion(null);
+      
+      // 🆕 CONFIGURACIÓN DE FALLBACK
+      const configuracionPorDefecto = {
+        storeName: '',
+        storeAddress: '',
+        storePhone: '',
+        storeDescription: '',
+        storeInstagram: '',
+        storeEmail: '',
+        storeDeliveryBase: '0',
+        storeDeliveryKm: '0',
+        iva: '0',
+        pageStatus: 'ACTIVA' // ← DEFAULT
+      };
+      
+      setConfiguracion(configuracionPorDefecto);
     } finally {
       setLoading(false);
     }
@@ -43,12 +91,20 @@ export const useConfiguracion = () => {
     setGuardando(true);
     
     try {
-      console.log('🔄 Guardando configuración...');
+      console.log('🔄 Guardando configuración...', nuevaConfiguracion);
       
       const response = await axiosAuth.post('/admin/saveConfig', nuevaConfiguracion);
       
-      if (response.data) {
-        setConfiguracion({ ...configuracion, ...nuevaConfiguracion });
+      // 🆕 FIX: Validar respuesta correctamente
+      if (response.data && (response.data.success || response.data.message)) {
+        // 🆕 ASEGURAR pageStatus en la configuración guardada
+        const configGuardada = {
+          ...configuracion,
+          ...nuevaConfiguracion,
+          pageStatus: nuevaConfiguracion.pageStatus || 'ACTIVA'
+        };
+        
+        setConfiguracion(configGuardada);
         console.log('✅ Configuración guardada exitosamente');
         toast.success('Configuración guardada correctamente');
         return true;
@@ -73,15 +129,39 @@ export const useConfiguracion = () => {
 
   // Función para actualizar un campo específico
   const actualizarCampo = useCallback((campo, valor) => {
-    setConfiguracion(prev => ({
-      ...prev,
-      [campo]: valor
-    }));
+    setConfiguracion(prev => {
+      if (!prev) {
+        // 🆕 Si prev es null, crear objeto con el campo
+        return {
+          storeName: '',
+          storeAddress: '',
+          storePhone: '',
+          storeDescription: '',
+          storeInstagram: '',
+          storeEmail: '',
+          storeDeliveryBase: '0',
+          storeDeliveryKm: '0',
+          iva: '0',
+          pageStatus: 'ACTIVA',
+          [campo]: valor
+        };
+      }
+      
+      return {
+        ...prev,
+        [campo]: valor
+      };
+    });
   }, []);
 
   // Función para validar configuración
   const validarConfiguracion = useCallback((config) => {
     const errores = [];
+    
+    if (!config || typeof config !== 'object') {
+      errores.push('Configuración inválida');
+      return { esValido: false, errores };
+    }
     
     if (!config.storeName || config.storeName.trim().length === 0) {
       errores.push('Nombre de la tienda es requerido');
@@ -152,7 +232,7 @@ export const useConfiguracion = () => {
       storeDeliveryKm: '0',
       mercadoPagoToken: '',
       iva: '0',
-      pageStatus: 'ACTIVA',
+      pageStatus: 'ACTIVA', // ← DEFAULT
       userName: '',
       passWord: ''
     };
