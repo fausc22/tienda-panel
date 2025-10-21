@@ -92,7 +92,8 @@ function InicioContent() {
     esPedidoAnulado,
     puedeConfirmarPedido,
     puedeEnviarPedido,
-    puedeAnularPedido
+    puedeAnularPedido,
+    generarTicketPedido
   } = useEditarPedidoSimplificado();
 
   // Hook de notificaciones
@@ -401,6 +402,21 @@ function InicioContent() {
     }
   };
 
+    const handleImprimirTicket = async () => {
+    try {
+      console.log('🖨️ Iniciando impresión de ticket...');
+      
+      const exito = await generarTicketPedido();
+      if (exito) {
+        console.log('✅ Ticket generado correctamente');
+        // No cerrar el modal para que el usuario pueda seguir viendo el pedido
+      }
+    } catch (error) {
+      console.error('❌ Error imprimiendo ticket:', error);
+      toast.error('Error al generar el ticket');
+    }
+  };
+
   const handleConfirmarEnviarPedido = async (horarioDesde, horarioHasta) => {
     try {
       console.log('🔄 Enviando pedido...');
@@ -643,6 +659,7 @@ function InicioContent() {
           onConfirmarPedido={handleConfirmarPedido}
           onEnviarPedido={handleEnviarPedido}
           onAnularPedido={handleAnularPedido}
+          onImprimirTicket={handleImprimirTicket}
         />
       )}
 

@@ -19,7 +19,7 @@ import FiltrosEstadisticas from '../components/estadisticas/FiltrosEstadisticas'
 import TarjetasMetricas from '../components/estadisticas/TarjetasMetricas';
 import GraficosEstadisticas from '../components/estadisticas/GraficosEstadisticas';
 import TablasEstadisticas from '../components/estadisticas/TablasEstadisticas';
-
+import EstadisticasProductosEspeciales from '../components/estadisticas/EstadisticasEspeciales';
 function EstadisticasContent() {
   // Hooks de autenticación
   const { isLoading: authLoading } = useProtectedPage();
@@ -162,6 +162,7 @@ function EstadisticasContent() {
             <TarjetasMetricas estadisticas={estadisticas} loading={loading} />
             <GraficosEstadisticas estadisticas={estadisticas} loading={loading} />
             <TablasEstadisticas estadisticas={estadisticas} loading={loading} />
+            <EstadisticasProductosEspeciales estadisticas={estadisticas} loading={loading} />
           </>
         );
     }

@@ -19,25 +19,22 @@ export const NotificacionNuevoPedido = ({
   }, [mostrar, pedido, detenerSonido]);
 
   // Función mejorada para cerrar modal
-  const handleCerrar = () => {
-    console.log('🔇 CERRANDO MODAL - Ejecutando acciones...');
-    
-    // 1. Detener sonido INMEDIATAMENTE si existe la función
-    if (typeof detenerSonido === 'function') {
-      console.log('⏹️ Deteniendo sonido desde modal...');
-      detenerSonido();
-    } else {
-      console.warn('⚠️ No se encontró función detenerSonido');
-    }
-    
-    // 2. Ejecutar función de cierre (que debería recargar la página)
-    if (typeof onCerrar === 'function') {
-      console.log('🔄 Ejecutando onCerrar...');
-      onCerrar();
-    } else {
-      console.error('❌ No se encontró función onCerrar');
-    }
-  };
+ // SOLO LA PARTE DEL HANDLER - El resto del componente queda igual
+const handleCerrar = () => {
+  console.log('🔇 CERRANDO MODAL - Ejecutando acciones...');
+  
+  // ✅ 1. Detener sonido INMEDIATAMENTE
+  if (typeof detenerSonido === 'function') {
+    console.log('⏹️ Deteniendo sonido...');
+    detenerSonido();
+  }
+  
+  // ✅ 2. Ejecutar función de cierre (recargará la página)
+  if (typeof onCerrar === 'function') {
+    console.log('🔄 Ejecutando onCerrar (recarga de página)...');
+    onCerrar();
+  }
+};
 
   // Función para ver pedido
   const handleVerPedido = () => {

@@ -694,9 +694,54 @@ const enviarEmailEnCamino = useCallback(async (horarioDesde, horarioHasta) => {
     return !entregado && !anulado;
   }, [esPedidoEntregado, esPedidoAnulado]);
 
+
+
+
+    const generarTicketPedido = useCallback(async () => {
+    if (!selectedPedido) {
+      toast.error('No hay pedido seleccionado');
+      return false;
+    }
+
+    const pedidoId = selectedPedido.id_pedido || selectedPedido.id;
+    
+    try {
+      console.log(`🖨️ Generando ticket para pedido ${pedidoId}...`);
+      
+      // Construir URL del ticket
+      const baseURL = process.env.NEXT_PUBLIC_API_URL;
+      const ticketURL = `${baseURL}/admin/pedido/${pedidoId}/ticket`;
+      
+      console.log(`📋 Abriendo ticket en: ${ticketURL}`);
+      
+      // Abrir en nueva ventana
+      const ventanaTicket = window.open(ticketURL, '_blank', 'width=800,height=600');
+      
+      if (!ventanaTicket) {
+        toast.error('No se pudo abrir la ventana. Verifique que los pop-ups estén habilitados.');
+        return false;
+      }
+      
+      // Opcional: Configurar impresión automática cuando cargue
+      ventanaTicket.onload = () => {
+        console.log('✅ Ticket cargado en nueva ventana');
+      };
+      
+      toast.success('Ticket generado exitosamente');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Error generando ticket:', error);
+      toast.error('Error al generar el ticket: ' + error.message);
+      return false;
+    }
+  }, [selectedPedido]);
+
   // ==============================================
   // RETURN DEL HOOK
   // ==============================================
+
+
 
   return {
     // Estados principales
@@ -735,6 +780,7 @@ const enviarEmailEnCamino = useCallback(async (horarioDesde, horarioHasta) => {
     esPedidoAnulado,
     puedeConfirmarPedido,
     puedeEnviarPedido,
-    puedeAnularPedido
+    puedeAnularPedido,
+    generarTicketPedido
   };
 };
