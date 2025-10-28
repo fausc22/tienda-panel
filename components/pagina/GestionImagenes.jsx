@@ -10,6 +10,7 @@ import {
   PlusIcon
 } from '@heroicons/react/24/outline';
 import { useProductoSearch } from '../../hooks/useBusquedaProductos';
+import OrdenadorShowcase from './OrdenadorShowcase';
 
 export default function GestionImagenes({
   imagenesPublicidad,
@@ -24,7 +25,8 @@ export default function GestionImagenes({
   verificarImagenProducto,
   subirImagenProducto,
   limpiarEstados,
-  getImagenInfo
+  getImagenInfo,
+  cargarImagenes 
 }) {
   const [seccionActiva, setSeccionActiva] = useState('publicidad');
   const [modalProducto, setModalProducto] = useState({ mostrar: false, producto: null });
@@ -151,25 +153,25 @@ export default function GestionImagenes({
             
             {/* Área de upload */}
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleImagenChange}
-                accept="image/*"
-                className="hidden"
-                id="imagen-publicidad-input"
-              />
-              
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleImagenChange}
+              accept="image/*,video/mp4,video/webm,video/quicktime"  
+              className="hidden"
+              id="imagen-publicidad-input"
+            />
+  
               <label
                 htmlFor="imagen-publicidad-input"
                 className="cursor-pointer flex flex-col items-center justify-center"
               >
                 <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mb-3" />
                 <span className="text-blue-600 hover:text-blue-800 font-medium mb-2 transition-colors">
-                  Haz clic para seleccionar una imagen
+                  Haz clic para seleccionar imagen o video
                 </span>
                 <span className="text-xs text-gray-500">
-                  Formatos: JPG, PNG, WEBP (Máx. 5MB)
+                  Formatos: JPG, PNG, WEBP, MP4, WEBM, MOV (Máx. 50MB)
                 </span>
               </label>
             </div>
@@ -201,6 +203,12 @@ export default function GestionImagenes({
             )}
           </div>
 
+            <div className="mt-6">
+              <OrdenadorShowcase 
+                imagenesPublicidad={imagenesPublicidad}
+                onOrdenGuardado={cargarImagenes}
+              />
+            </div>
           {/* Lista de imágenes existentes */}
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">

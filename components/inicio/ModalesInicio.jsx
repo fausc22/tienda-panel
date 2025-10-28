@@ -123,8 +123,8 @@ const estaAnulado = pedido.estado === 'Anulado' ||
           {/* Botones de acción del modal - ACTUALIZADOS */}
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
 
-              {estaConfirmado && (
-              <button 
+              {(estaConfirmado || estaEntregado) && (
+              <button
                 onClick={onImprimirTicket}
                 className="bg-purple-600 hover:bg-purple-700 text-white text-sm sm:text-lg font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
               >

@@ -714,20 +714,15 @@ const enviarEmailEnCamino = useCallback(async (horarioDesde, horarioHasta) => {
       
       console.log(`📋 Abriendo ticket en: ${ticketURL}`);
       
-      // Abrir en nueva ventana
-      const ventanaTicket = window.open(ticketURL, '_blank', 'width=800,height=600');
-      
+      // Abrir en nueva ventana con configuración para impresoras ticket
+      const ventanaTicket = window.open(ticketURL, '_blank', 'width=400,height=600,menubar=no,toolbar=no,location=no');
+
       if (!ventanaTicket) {
         toast.error('No se pudo abrir la ventana. Verifique que los pop-ups estén habilitados.');
         return false;
       }
-      
-      // Opcional: Configurar impresión automática cuando cargue
-      ventanaTicket.onload = () => {
-        console.log('✅ Ticket cargado en nueva ventana');
-      };
-      
-      toast.success('Ticket generado exitosamente');
+
+      toast.success('Preparando impresión del ticket...');
       return true;
       
     } catch (error) {

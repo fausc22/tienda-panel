@@ -26,7 +26,7 @@ const HomePage = () => {
       <Head>
         <title>Panel Admin - PuntoSur</title>
         <meta name="description" content="Panel de administración de PuntoSur" />
-        <link rel="icon" href={buildAssetPath('/favicon.ico')} />
+        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon-panel.ico" />
       </Head>
 
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
