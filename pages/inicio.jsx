@@ -176,7 +176,7 @@ function InicioContent() {
   useEffect(() => {
     if (!authLoading && user) {
       console.log('🔄 Iniciando monitoreo de nuevos pedidos');
-      iniciarMonitoreo(60000);
+      iniciarMonitoreo(10000); // Cada 10 segundos
       
       return () => {
         console.log('🧹 Limpiando monitoreo y deteniendo audio...');
@@ -228,10 +228,30 @@ function InicioContent() {
     cerrarEdicion();
   };
 
+  const handleCerrarNotificacion = useCallback(async () => {
+    // Cerrar la notificación
+    cerrarNotificacion();
+
+    // Recargar los pedidos para mostrar el nuevo en la lista
+    console.log('🔄 Recargando lista de pedidos...');
+    await cargarPedidos();
+    toast.success('Lista de pedidos actualizada');
+  }, [cerrarNotificacion, cargarPedidos]);
+
   const handleVerPedidoDesdeNotificacion = async (pedido) => {
     try {
       console.log('👁️ Abriendo pedido desde notificación:', pedido.id_pedido);
-      // La función cerrarNotificacion() se encargará de recargar la página
+
+      // Cerrar notificación primero
+      cerrarNotificacion();
+
+      // Recargar lista de pedidos
+      await cargarPedidos();
+
+      // Abrir el modal con el pedido
+      await handleRowDoubleClick(pedido);
+
+      toast.success('Pedido cargado');
     } catch (error) {
       console.error('❌ Error:', error);
       toast.error('Error al procesar pedido');
@@ -726,7 +746,7 @@ function InicioContent() {
       <NotificacionNuevoPedido
         mostrar={mostrarNotificacion}
         pedido={nuevoPedido}
-        onCerrar={cerrarNotificacion}
+        onCerrar={handleCerrarNotificacion}
         onVerPedido={handleVerPedidoDesdeNotificacion}
         detenerSonido={detenerSonido}
       />

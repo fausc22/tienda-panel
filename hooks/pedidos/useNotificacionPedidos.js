@@ -13,14 +13,29 @@ export const useNotificacionesPedidos = () => {
   const intervalRef = useRef(null);
   const audioRef = useRef(null);
   const parpadeadorRef = useRef(null);
-  const pedidosAnterioresRef = useRef([]); // 🔑 CLAVE: REF en lugar de STATE
   const isCheckingRef = useRef(false); // 🔑 Prevenir race conditions
+  const ultimoPedidoIdRef = useRef(null); // 🔑 ID del último pedido visto
+  const notificacionVisibleRef = useRef(false); // 🔑 Flag para saber si la notificación está visible
+  const sonidoHabilitadoRef = useRef(false); // 🔑 Ref para el estado del sonido
+  const audioListoRef = useRef(false); // 🔑 Ref para el estado del audio
+  const esPrimerChequeoRef = useRef(true); // 🔑 Flag para saber si es el primer chequeo después de cargar la página
 
   // Verificar audio habilitado al cargar
   useEffect(() => {
     const audioHabilitado = localStorage.getItem('audio_habilitado') === 'true';
     setSonidoHabilitado(audioHabilitado);
+    sonidoHabilitadoRef.current = audioHabilitado; // 🔑 Mantener en ref también
     console.log('🔊 Audio habilitado desde localStorage:', audioHabilitado);
+
+    // 🔑 Cargar último ID de pedido visto desde localStorage
+    const ultimoIdGuardado = localStorage.getItem('ultimo_pedido_id');
+    if (ultimoIdGuardado) {
+      ultimoPedidoIdRef.current = parseInt(ultimoIdGuardado);
+      console.log(`📋 Último pedido conocido desde localStorage: #${ultimoPedidoIdRef.current}`);
+    } else {
+      ultimoPedidoIdRef.current = 0; // Inicializar a 0 si no existe
+      console.log('📋 No hay último pedido en localStorage. Inicializando a 0.');
+    }
   }, []);
 
   // Inicializar audio con manejo robusto
@@ -51,9 +66,11 @@ export const useNotificacionesPedidos = () => {
         
         audioRef.current = audio;
         setAudioListo(true);
+        audioListoRef.current = true; // 🔑 Mantener en ref también
       } catch (error) {
         console.error('❌ Error inicializando audio:', error);
         setAudioListo(false);
+        audioListoRef.current = false; // 🔑 Mantener en ref también
       }
     };
 
@@ -96,6 +113,7 @@ export const useNotificacionesPedidos = () => {
       
       localStorage.setItem('audio_habilitado', 'true');
       setSonidoHabilitado(true);
+      sonidoHabilitadoRef.current = true; // 🔑 Actualizar ref también
       
       return true;
     } catch (error) {
@@ -133,8 +151,13 @@ export const useNotificacionesPedidos = () => {
   }, []);
 
   const reproducirSonidoNotificacion = useCallback(async () => {
-    if (!sonidoHabilitado || !audioListo || !audioRef.current) {
-      console.log('🔇 Sonido no disponible:', { sonidoHabilitado, audioListo, audioRef: !!audioRef.current });
+    // ✅ USAR REFS para evitar problemas de closure
+    if (!sonidoHabilitadoRef.current || !audioListoRef.current || !audioRef.current) {
+      console.log('🔇 Sonido no disponible:', { 
+        sonidoHabilitado: sonidoHabilitadoRef.current, 
+        audioListo: audioListoRef.current, 
+        audioRef: !!audioRef.current 
+      });
       return false;
     }
 
@@ -177,52 +200,84 @@ export const useNotificacionesPedidos = () => {
     isCheckingRef.current = true;
 
     try {
+      // Asegurar que tenemos un valor numérico válido
+      const ultimoIdEnviado = ultimoPedidoIdRef.current ?? 0;
       console.log('🔄 Chequeando nuevos pedidos...');
-      const response = await axiosAuth.get('/admin/pedidos-pendientes-check');
-      
-      if (response.data && Array.isArray(response.data)) {
-        const pedidosActuales = response.data;
-        
-        // ✅ USAR REF EN LUGAR DE STATE
-        const pedidosAnterioresActual = pedidosAnterioresRef.current;
-        
-        // Primera ejecución - solo guardar
-        if (pedidosAnterioresActual.length === 0) {
-          console.log('📝 Primera carga - guardando', pedidosActuales.length, 'pedidos');
-          pedidosAnterioresRef.current = pedidosActuales;
+      console.log(`📤 Enviando ultimo_id: ${ultimoIdEnviado}`);
+      console.log(`🏁 esPrimerChequeo: ${esPrimerChequeoRef.current}`);
+
+      // Enviar el ID del último pedido visto como parámetro
+      console.log(`🌐 [FRONTEND] Haciendo request con params:`, { ultimo_id: ultimoIdEnviado });
+
+      const response = await axiosAuth.get('/admin/pedidos-pendientes-check', {
+        params: {
+          ultimo_id: ultimoIdEnviado
+        }
+      });
+
+      console.log(`🌐 [FRONTEND] URL completa:`, response.config.url);
+
+      console.log('📥 Respuesta del backend:', response.data);
+
+      // 🔑 CRÍTICO: Actualizar el ultimo_id con lo que retorna el backend
+      if (response.data && response.data.ultimo_id !== undefined) {
+        const nuevoUltimoId = response.data.ultimo_id;
+
+        // Si es el primer chequeo Y estábamos en 0, solo inicializar sin notificar
+        if (esPrimerChequeoRef.current && ultimoPedidoIdRef.current === 0) {
+          console.log(`🆕 [PRIMER CHEQUEO] Inicializando ultimo_pedido_id a #${nuevoUltimoId} (sin notificar)`);
+          ultimoPedidoIdRef.current = nuevoUltimoId;
+          localStorage.setItem('ultimo_pedido_id', nuevoUltimoId.toString());
+          esPrimerChequeoRef.current = false; // Ya no es el primer chequeo
           setUltimoCheckeo(new Date());
+          return; // Salir sin notificar
+        }
+
+        // Si NO es el primer chequeo, continuar con la lógica normal
+        esPrimerChequeoRef.current = false;
+      }
+
+      // El backend devuelve { nuevo_pedido: true/false, pedido: {...} }
+      if (response.data && response.data.nuevo_pedido) {
+        const pedidoNuevo = response.data.pedido;
+
+        // ⚠️ CRÍTICO: Si ya hay una notificación visible, no mostrar otra
+        if (notificacionVisibleRef.current) {
+          console.log('⏸️ Notificación ya visible, ignorando nuevo pedido hasta que se cierre');
           return;
         }
 
-        // Detectar nuevos pedidos comparando IDs
-        const idsAnteriores = new Set(pedidosAnterioresActual.map(p => p.id_pedido));
-        const pedidosNuevos = pedidosActuales.filter(p => !idsAnteriores.has(p.id_pedido));
-        
-        if (pedidosNuevos.length > 0) {
-          const pedidoNuevo = pedidosNuevos[pedidosNuevos.length - 1];
-          console.log(`🚨 ¡NUEVO PEDIDO DETECTADO! #${pedidoNuevo.id_pedido}`);
-          console.log('📊 Pedidos anteriores:', pedidosAnterioresActual.length, '| Actuales:', pedidosActuales.length);
-          
-          // Actualizar estado para mostrar notificación
-          setNuevoPedido(pedidoNuevo);
-          setMostrarNotificacion(true);
-          
-          // Iniciar efectos visuales y sonoros
-          iniciarParpadeorTitulo(pedidoNuevo);
-          
-          setTimeout(async () => {
-            const audioIniciado = await reproducirSonidoNotificacion();
-            console.log(`🔊 Audio ${audioIniciado ? 'INICIADO' : 'NO INICIADO'}`);
-          }, 500);
-          
-          // Actualizar ref con nuevos pedidos
-          pedidosAnterioresRef.current = pedidosActuales;
-        } else {
-          console.log('✅ Sin nuevos pedidos. Total:', pedidosActuales.length);
-        }
-        
-        setUltimoCheckeo(new Date());
+        console.log(`🚨 ¡NUEVO PEDIDO DETECTADO! #${pedidoNuevo.id_pedido}`);
+        console.log('Pedido:', pedidoNuevo);
+
+        // ⚠️ IMPORTANTE: Actualizar el último ID ANTES de mostrar notificación
+        // Esto previene que se vuelva a mostrar el mismo pedido
+        ultimoPedidoIdRef.current = pedidoNuevo.id_pedido;
+
+        // 🔑 Guardar en localStorage para persistir entre recargas
+        localStorage.setItem('ultimo_pedido_id', pedidoNuevo.id_pedido.toString());
+
+        console.log(`💾 Actualizado ultimoPedidoIdRef a #${ultimoPedidoIdRef.current}`);
+
+        // Actualizar estado para mostrar notificación
+        notificacionVisibleRef.current = true; // Marcar como visible
+        setNuevoPedido(pedidoNuevo);
+        setMostrarNotificacion(true);
+
+        // Iniciar efectos visuales y sonoros
+        iniciarParpadeorTitulo(pedidoNuevo);
+
+        // 🔊 Iniciar audio INMEDIATAMENTE (sin delay)
+        setTimeout(async () => {
+          const audioIniciado = await reproducirSonidoNotificacion();
+          console.log(`🔊 Audio ${audioIniciado ? 'INICIADO' : 'NO INICIADO'}`);
+        }, 100); // 100ms en lugar de 500ms
+
+      } else {
+        console.log('✅ Sin nuevos pedidos');
       }
+
+      setUltimoCheckeo(new Date());
     } catch (error) {
       console.error('❌ Error chequeando pedidos:', error);
     } finally {
@@ -233,6 +288,19 @@ export const useNotificacionesPedidos = () => {
   // ✅ FUNCIÓN DE INICIO DE MONITOREO MEJORADA
   const iniciarMonitoreo = useCallback((intervalo = 60000) => {
     console.log(`🔄 Iniciando monitoreo (cada ${intervalo/1000}s)`);
+    
+    // 🔑 CRÍTICO: Cargar último ID de pedido SI AÚN NO SE HA CARGADO
+    // Esto es necesario porque el useEffect puede no haberse ejecutado aún
+    if (ultimoPedidoIdRef.current === null) {
+      const ultimoIdGuardado = localStorage.getItem('ultimo_pedido_id');
+      if (ultimoIdGuardado) {
+        ultimoPedidoIdRef.current = parseInt(ultimoIdGuardado);
+        console.log(`📋 Último pedido conocido (cargado al iniciar monitoreo): #${ultimoPedidoIdRef.current}`);
+      } else {
+        ultimoPedidoIdRef.current = 0; // Inicializar a 0 explícitamente
+        console.log('📋 No hay último pedido conocido en localStorage. Inicializando a 0.');
+      }
+    }
     
     // 🔑 CRÍTICO: Limpiar intervalo anterior si existe
     if (intervalRef.current) {
@@ -266,19 +334,26 @@ export const useNotificacionesPedidos = () => {
   }, [detenerSonidoNotificacion, detenerParpadeorTitulo]);
 
   const cerrarNotificacion = useCallback(() => {
-    console.log('❌ Cerrando notificación y recargando página...');
-    
-    // ✅ Detener TODO antes de recargar
+    console.log('❌ Cerrando notificación...');
+    console.log(`💾 Valor actual en localStorage: ${localStorage.getItem('ultimo_pedido_id')}`);
+    console.log(`💾 Valor actual en ultimoPedidoIdRef: ${ultimoPedidoIdRef.current}`);
+
+    // ✅ Detener TODO visual
     detenerSonidoNotificacion();
     detenerParpadeorTitulo();
+    notificacionVisibleRef.current = false; // Marcar como cerrada
     setMostrarNotificacion(false);
+
+    // ⚠️ Asegurar que el valor esté guardado
+    if (ultimoPedidoIdRef.current !== null) {
+      localStorage.setItem('ultimo_pedido_id', ultimoPedidoIdRef.current.toString());
+      console.log(`💾 Guardado en localStorage: #${ultimoPedidoIdRef.current}`);
+    }
+
+    // Limpiar el pedido mostrado
     setNuevoPedido(null);
-    
-    // Recargar después de un pequeño delay
-    setTimeout(() => {
-      console.log('🔄 Recargando página...');
-      window.location.reload(true);
-    }, 100);
+
+    console.log('✅ Notificación cerrada sin recargar página');
   }, [detenerSonidoNotificacion, detenerParpadeorTitulo]);
 
   return {
