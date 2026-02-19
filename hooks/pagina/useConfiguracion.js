@@ -232,9 +232,7 @@ export const useConfiguracion = () => {
       storeDeliveryKm: '0',
       mercadoPagoToken: '',
       iva: '0',
-      pageStatus: 'ACTIVA', // ← DEFAULT
-      userName: '',
-      passWord: ''
+      pageStatus: 'ACTIVA' // ← DEFAULT
     };
     
     setConfiguracion(configuracionPorDefecto);

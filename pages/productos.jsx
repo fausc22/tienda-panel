@@ -24,8 +24,8 @@ import {
 } from '../components/productos/ModalesProductos';
 
 function ProductosContent() {
-  // Hook de autenticación y protección
-  const { isLoading: authLoading } = useProtectedPage();
+  // Hook de autenticación y protección - Solo admin puede acceder
+  const { isLoading: authLoading } = useProtectedPage(['admin']);
   const { user } = useAuth();
 
   // ✅ ESTADO ÚNICO PARA MODALES - Solo uno puede estar activo a la vez
@@ -39,6 +39,7 @@ function ProductosContent() {
   const [filtrosActivos, setFiltrosActivos] = useState({});
   const [sortField, setSortField] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
+  const [etiquetaSeleccionada, setEtiquetaSeleccionada] = useState('total'); // Estado para etiqueta seleccionada
 
   // Hook para gestión de productos
   const {
@@ -68,7 +69,10 @@ function ProductosContent() {
     if (filtrosActivos.estado) {
       switch (filtrosActivos.estado) {
         case 'en_stock':
-          resultado = resultado.filter(p => (parseInt(p.stock) || 0) > 0);
+          resultado = resultado.filter(p => {
+            const stock = parseInt(p.stock) || 0;
+            return stock > 10;
+          });
           break;
         case 'stock_bajo':
           resultado = resultado.filter(p => {
@@ -78,12 +82,6 @@ function ProductosContent() {
           break;
         case 'sin_stock':
           resultado = resultado.filter(p => (parseInt(p.stock) || 0) === 0);
-          break;
-        case 'habilitado':
-          resultado = resultado.filter(p => p.habilitado === 'S');
-          break;
-        case 'deshabilitado':
-          resultado = resultado.filter(p => p.habilitado === 'N');
           break;
       }
     }
@@ -148,21 +146,24 @@ function ProductosContent() {
     resetearPaginacion
   } = usePaginacion(productosFiltrados, 20);
 
-  // Estadísticas de productos filtrados
-  const estadisticas = useMemo(() => {
+  // Estadísticas FIJAS (calculadas una vez de TODOS los productos, no cambian con filtros)
+  const estadisticasFijas = useMemo(() => {
     return {
-      total: productosFiltrados.length,
-      conStock: productosFiltrados.filter(p => (parseInt(p.stock) || 0) > 0).length,
-      sinStock: productosFiltrados.filter(p => (parseInt(p.stock) || 0) === 0).length,
-      stockBajo: productosFiltrados.filter(p => {
+      total: productos.length,
+      conStock: productos.filter(p => {
+        const stock = parseInt(p.stock) || 0;
+        return stock > 10;
+      }).length,
+      sinStock: productos.filter(p => (parseInt(p.stock) || 0) === 0).length,
+      stockBajo: productos.filter(p => {
         const stock = parseInt(p.stock) || 0;
         return stock > 0 && stock <= 10;
       }).length,
-      precioPromedio: productosFiltrados.length > 0 
-        ? productosFiltrados.reduce((acc, p) => acc + (parseFloat(p.precio) || 0), 0) / productosFiltrados.length
+      precioPromedio: productos.length > 0 
+        ? productos.reduce((acc, p) => acc + (parseFloat(p.precio) || 0), 0) / productos.length
         : 0
     };
-  }, [productosFiltrados]);
+  }, [productos]); // Solo se recalcula cuando cambian los productos, no los filtros
 
   // Cargar productos al montar el componente
   useEffect(() => {
@@ -183,10 +184,17 @@ function ProductosContent() {
   // HANDLERS para búsqueda y filtros
   const handleBuscar = async (filtrosEncoded) => {
     const parametros = JSON.parse(decodeURIComponent(filtrosEncoded));
-    const { termino, ...filtros } = parametros;
+    const { termino, estado, ...filtros } = parametros;
+    
+    // Si hay un estado en los parámetros, actualizar la etiqueta seleccionada
+    if (estado) {
+      setEtiquetaSeleccionada(estado);
+    } else if (!estado && !filtrosActivos.estado) {
+      setEtiquetaSeleccionada('total');
+    }
     
     // Aplicar filtros locales
-    setFiltrosActivos(filtros);
+    setFiltrosActivos({ ...filtros, estado: estado || filtros.estado || '' });
     
     // Si hay término de búsqueda, hacer búsqueda en servidor
     if (termino && termino.trim().length >= 2) {
@@ -205,6 +213,7 @@ function ProductosContent() {
     setFiltrosActivos({});
     setSortField(null);
     setSortDirection('asc');
+    setEtiquetaSeleccionada('total'); // Resetear a "Total" al limpiar
     await limpiarFiltros();
   };
 
@@ -343,7 +352,19 @@ function ProductosContent() {
           onActualizar={() => handleCargarProductos('')}
           loading={loading}
           totalProductos={productosFiltrados.length}
-          estadisticas={estadisticas}
+          estadisticas={estadisticasFijas}
+          etiquetaSeleccionada={etiquetaSeleccionada}
+          onEtiquetaClick={(etiqueta) => {
+            setEtiquetaSeleccionada(etiqueta);
+            const nuevosFiltros = { ...filtrosActivos };
+            if (etiqueta === 'total') {
+              nuevosFiltros.estado = '';
+            } else {
+              nuevosFiltros.estado = etiqueta;
+            }
+            setFiltrosActivos(nuevosFiltros);
+            resetearPaginacion();
+          }}
         />
 
         {/* Tabla de productos */}

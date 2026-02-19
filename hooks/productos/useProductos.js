@@ -64,9 +64,36 @@ export const useProductos = () => {
   // Función para crear un nuevo producto
   const crearProducto = useCallback(async (nuevoProducto) => {
     try {
-      console.log('🔄 Creando nuevo producto:', nuevoProducto.nombre);
+      console.log('🔄 Creando nuevo producto:', nuevoProducto.nombre || nuevoProducto.art_desc_vta);
       
-      const response = await axiosAuth.post('/admin/productos', nuevoProducto);
+      // Preparar todos los campos del JSON
+      const productoParaEnvio = {
+        codigo_barra: nuevoProducto.codigo_barra,
+        nombre: nuevoProducto.nombre || nuevoProducto.art_desc_vta,
+        art_desc_vta: nuevoProducto.art_desc_vta || nuevoProducto.nombre,
+        cod_interno: nuevoProducto.cod_interno || 0,
+        marca: nuevoProducto.marca || null,
+        costo: nuevoProducto.costo || 0,
+        precio: nuevoProducto.precio || 0,
+        precio_sin_iva: nuevoProducto.precio_sin_iva || 0,
+        precio_sin_iva_1: nuevoProducto.precio_sin_iva_1 || 0,
+        precio_sin_iva_2: nuevoProducto.precio_sin_iva_2 || 0,
+        precio_sin_iva_3: nuevoProducto.precio_sin_iva_3 || 0,
+        precio_sin_iva_4: nuevoProducto.precio_sin_iva_4 || 0,
+        categoria: nuevoProducto.categoria,
+        cod_dpto: nuevoProducto.cod_dpto || nuevoProducto.categoria,
+        cod_rubro: nuevoProducto.cod_rubro || null,
+        cod_subrubro: nuevoProducto.cod_subrubro || null,
+        stock: nuevoProducto.stock || 0,
+        pesable: nuevoProducto.pesable || 0,
+        cod_iva: nuevoProducto.cod_iva || 0,
+        porc_impint: nuevoProducto.porc_impint || 0,
+        impuesto_interno: nuevoProducto.impuesto_interno || 0,
+        descripcion: nuevoProducto.descripcion || '',
+        habilitado: nuevoProducto.habilitado || 'S'
+      };
+      
+      const response = await axiosAuth.post('/admin/productos', productoParaEnvio);
       
       if (response.data.success) {
         console.log('✅ Producto creado exitosamente');
@@ -105,14 +132,29 @@ export const useProductos = () => {
       const codigoBarra = productoActualizado.codigo_barra;
       console.log(`🔄 Actualizando producto: ${codigoBarra}`);
       
-      // Usar la ruta existente
+      // Enviar todos los campos del JSON
       const response = await axiosAuth.put(`/admin/actualizarInfoProducto/${codigoBarra}`, {
-        nombre: productoActualizado.nombre,
+        nombre: productoActualizado.nombre || productoActualizado.art_desc_vta,
+        art_desc_vta: productoActualizado.art_desc_vta || productoActualizado.nombre,
         costo: productoActualizado.costo,
         precio: productoActualizado.precio,
         precio_sin_iva: productoActualizado.precio_sin_iva,
+        precio_sin_iva_1: productoActualizado.precio_sin_iva_1,
+        precio_sin_iva_2: productoActualizado.precio_sin_iva_2,
+        precio_sin_iva_3: productoActualizado.precio_sin_iva_3,
         precio_sin_iva_4: productoActualizado.precio_sin_iva_4,
-        categoria: productoActualizado.categoria
+        categoria: productoActualizado.categoria,
+        cod_dpto: productoActualizado.cod_dpto || productoActualizado.categoria,
+        cod_rubro: productoActualizado.cod_rubro,
+        cod_subrubro: productoActualizado.cod_subrubro,
+        cod_interno: productoActualizado.cod_interno,
+        marca: productoActualizado.marca,
+        stock: productoActualizado.stock,
+        pesable: productoActualizado.pesable,
+        cod_iva: productoActualizado.cod_iva,
+        porc_impint: productoActualizado.porc_impint,
+        impuesto_interno: productoActualizado.impuesto_interno,
+        habilitado: productoActualizado.habilitado
       });
       
       if (response.data.success) {

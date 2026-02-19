@@ -710,6 +710,10 @@ const enviarEmailEnCamino = useCallback(async (horarioDesde, horarioHasta) => {
       
       // Construir URL del ticket
       const baseURL = process.env.NEXT_PUBLIC_API_URL;
+      if (!baseURL) {
+        toast.error('Error de configuración: NEXT_PUBLIC_API_URL no está definida');
+        return false;
+      }
       const ticketURL = `${baseURL}/admin/pedido/${pedidoId}/ticket`;
       
       console.log(`📋 Abriendo ticket en: ${ticketURL}`);

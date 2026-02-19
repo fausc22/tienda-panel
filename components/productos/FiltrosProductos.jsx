@@ -14,7 +14,9 @@ export default function FiltrosProductos({
   onActualizar,
   loading,
   totalProductos,
-  estadisticas
+  estadisticas,
+  etiquetaSeleccionada = 'total',
+  onEtiquetaClick
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filtros, setFiltros] = useState({
@@ -168,11 +170,9 @@ export default function FiltrosProductos({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Todos los estados</option>
-                <option value="en_stock">En Stock</option>
+                <option value="en_stock">Con Stock ({'>'}10)</option>
                 <option value="stock_bajo">Stock Bajo (≤10)</option>
                 <option value="sin_stock">Sin Stock</option>
-                <option value="habilitado">Habilitado</option>
-                <option value="deshabilitado">Deshabilitado</option>
               </select>
             </div>
 
@@ -260,29 +260,89 @@ export default function FiltrosProductos({
         </div>
       )}
 
-      {/* Estadísticas rápidas */}
+      {/* Estadísticas rápidas - Botones clickeables */}
       {estadisticas && (
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            <div className="bg-blue-50 rounded-lg p-3">
-              <div className="text-2xl font-bold text-blue-600">{estadisticas.total}</div>
-              <div className="text-sm text-blue-800">Total</div>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <button
+              onClick={() => {
+                if (onEtiquetaClick) {
+                  onEtiquetaClick('total');
+                }
+              }}
+              className={`rounded-lg p-3 text-center transition-all cursor-pointer border-2 ${
+                etiquetaSeleccionada === 'total'
+                  ? 'bg-blue-100 border-blue-500 shadow-md scale-105'
+                  : 'bg-blue-50 border-transparent hover:bg-blue-100 hover:border-blue-300'
+              }`}
+            >
+              <div className={`text-2xl font-bold ${etiquetaSeleccionada === 'total' ? 'text-blue-700' : 'text-blue-600'}`}>
+                {estadisticas.total}
+              </div>
+              <div className={`text-sm font-medium ${etiquetaSeleccionada === 'total' ? 'text-blue-900' : 'text-blue-800'}`}>
+                Total
+              </div>
+            </button>
             
-            <div className="bg-green-50 rounded-lg p-3">
-              <div className="text-2xl font-bold text-green-600">{estadisticas.conStock}</div>
-              <div className="text-sm text-green-800">Con Stock</div>
-            </div>
+            <button
+              onClick={() => {
+                if (onEtiquetaClick) {
+                  onEtiquetaClick('en_stock');
+                }
+              }}
+              className={`rounded-lg p-3 text-center transition-all cursor-pointer border-2 ${
+                etiquetaSeleccionada === 'en_stock'
+                  ? 'bg-green-100 border-green-500 shadow-md scale-105'
+                  : 'bg-green-50 border-transparent hover:bg-green-100 hover:border-green-300'
+              }`}
+            >
+              <div className={`text-2xl font-bold ${etiquetaSeleccionada === 'en_stock' ? 'text-green-700' : 'text-green-600'}`}>
+                {estadisticas.conStock}
+              </div>
+              <div className={`text-sm font-medium ${etiquetaSeleccionada === 'en_stock' ? 'text-green-900' : 'text-green-800'}`}>
+                Con Stock ({'>'}10)
+              </div>
+            </button>
             
-            <div className="bg-orange-50 rounded-lg p-3">
-              <div className="text-2xl font-bold text-orange-600">{estadisticas.stockBajo}</div>
-              <div className="text-sm text-orange-800">Stock Bajo</div>
-            </div>
+            <button
+              onClick={() => {
+                if (onEtiquetaClick) {
+                  onEtiquetaClick('stock_bajo');
+                }
+              }}
+              className={`rounded-lg p-3 text-center transition-all cursor-pointer border-2 ${
+                etiquetaSeleccionada === 'stock_bajo'
+                  ? 'bg-orange-100 border-orange-500 shadow-md scale-105'
+                  : 'bg-orange-50 border-transparent hover:bg-orange-100 hover:border-orange-300'
+              }`}
+            >
+              <div className={`text-2xl font-bold ${etiquetaSeleccionada === 'stock_bajo' ? 'text-orange-700' : 'text-orange-600'}`}>
+                {estadisticas.stockBajo}
+              </div>
+              <div className={`text-sm font-medium ${etiquetaSeleccionada === 'stock_bajo' ? 'text-orange-900' : 'text-orange-800'}`}>
+                Stock Bajo (≤10)
+              </div>
+            </button>
             
-            <div className="bg-red-50 rounded-lg p-3">
-              <div className="text-2xl font-bold text-red-600">{estadisticas.sinStock}</div>
-              <div className="text-sm text-red-800">Sin Stock</div>
-            </div>
+            <button
+              onClick={() => {
+                if (onEtiquetaClick) {
+                  onEtiquetaClick('sin_stock');
+                }
+              }}
+              className={`rounded-lg p-3 text-center transition-all cursor-pointer border-2 ${
+                etiquetaSeleccionada === 'sin_stock'
+                  ? 'bg-red-100 border-red-500 shadow-md scale-105'
+                  : 'bg-red-50 border-transparent hover:bg-red-100 hover:border-red-300'
+              }`}
+            >
+              <div className={`text-2xl font-bold ${etiquetaSeleccionada === 'sin_stock' ? 'text-red-700' : 'text-red-600'}`}>
+                {estadisticas.sinStock}
+              </div>
+              <div className={`text-sm font-medium ${etiquetaSeleccionada === 'sin_stock' ? 'text-red-900' : 'text-red-800'}`}>
+                Sin Stock
+              </div>
+            </button>
           </div>
           
           {estadisticas.precioPromedio > 0 && (

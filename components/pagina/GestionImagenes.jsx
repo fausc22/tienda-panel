@@ -98,6 +98,10 @@ export default function GestionImagenes({
   // Obtener URL de la imagen
   const getImagenUrl = (rutaImagen) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      console.error('❌ NEXT_PUBLIC_API_URL no está definida');
+      return rutaImagen;
+    }
     return `${apiUrl}${rutaImagen}`;
   };
 

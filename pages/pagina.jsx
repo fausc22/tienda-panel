@@ -31,7 +31,8 @@ import EstadisticasPagina from '../components/pagina/EstadisticasPagina';
 import ModalProductoSelector from '../components/pagina/ModalProductoSelector';
 
 function PaginaContent() {
-  const { isLoading: authLoading } = useProtectedPage();
+  // Hook de autenticación y protección - Solo admin puede acceder
+  const { isLoading: authLoading } = useProtectedPage(['admin']);
   const { user } = useAuth();
 
   const [seccionActiva, setSeccionActiva] = useState('configuracion');

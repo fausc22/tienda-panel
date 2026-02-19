@@ -33,6 +33,10 @@ export const useWebSocket = () => {
       console.log('🔌 Intentando conectar al WebSocket...');
 
       const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL;
+      if (!SOCKET_URL) {
+        console.error('❌ NEXT_PUBLIC_API_URL no está definida. No se puede conectar al WebSocket.');
+        return null;
+      }
 
       const socket = io(SOCKET_URL, {
         transports: ['websocket', 'polling'],

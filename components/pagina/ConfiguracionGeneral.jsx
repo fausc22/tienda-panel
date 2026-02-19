@@ -377,54 +377,6 @@ export default function ConfiguracionGeneral({
   )}
 </div>
 
-        {/* Credenciales de Administrador */}
-        <div className="bg-red-50 border border-red-200 p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-red-800 mb-4">
-            Credenciales de Administrador
-          </h3>
-          <div className="bg-red-100 border border-red-300 rounded-md p-3 mb-4">
-            <div className="flex">
-              <ExclamationTriangleIcon className="h-5 w-5 text-red-400 mt-0.5" />
-              <div className="ml-3">
-                <p className="text-sm text-red-800">
-                  <strong>¡Cuidado!</strong> Cambiar estas credenciales afectará el acceso al panel de administración.
-                  Asegúrese de recordar las nuevas credenciales.
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-red-700 mb-2">
-                Usuario Administrador *
-              </label>
-              <input
-                type="text"
-                value={formData.userName || ''}
-                onChange={(e) => handleCampoChange('userName', e.target.value)}
-                className="w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="Usuario del administrador"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-red-700 mb-2">
-                Contraseña Administrador *
-              </label>
-              <input
-                type="password"
-                value={formData.passWord || ''}
-                onChange={(e) => handleCampoChange('passWord', e.target.value)}
-                className="w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="Nueva contraseña"
-                required
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Botones de acción */}
         <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6 border-t border-gray-200">
           <button

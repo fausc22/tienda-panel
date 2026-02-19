@@ -16,16 +16,12 @@ export default function OrdenadorShowcase({ imagenesPublicidad, onOrdenGuardado 
 
   // Obtener la URL base de la API desde las variables de entorno
   const getApiBaseURL = () => {
-    if (typeof window !== 'undefined') {
-      // Primero intentar desde la variable de entorno
-      if (process.env.NEXT_PUBLIC_API_URL) {
-        return process.env.NEXT_PUBLIC_API_URL;
-      }
-      // Fallback: construir desde window.location
-      return `${window.location.protocol}//${window.location.hostname}:3002`;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      console.error('❌ NEXT_PUBLIC_API_URL no está definida');
+      throw new Error('NEXT_PUBLIC_API_URL no está configurada. Por favor, configúrala en tu archivo .env');
     }
-    // Default para SSR
-    return 'http://localhost:3002';
+    return apiUrl;
   };
 
   // Cargar imágenes cuando cambian

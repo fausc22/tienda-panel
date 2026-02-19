@@ -21,8 +21,8 @@ import GraficosEstadisticas from '../components/estadisticas/GraficosEstadistica
 import TablasEstadisticas from '../components/estadisticas/TablasEstadisticas';
 import EstadisticasProductosEspeciales from '../components/estadisticas/EstadisticasEspeciales';
 function EstadisticasContent() {
-  // Hooks de autenticación
-  const { isLoading: authLoading } = useProtectedPage();
+  // Hooks de autenticación - Solo admin puede acceder
+  const { isLoading: authLoading } = useProtectedPage(['admin']);
   const { user } = useAuth();
 
   // Estados locales

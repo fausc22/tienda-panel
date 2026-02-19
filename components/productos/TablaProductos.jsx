@@ -18,10 +18,7 @@ export default function TablaProductos({
 }) {
   const [expandedRow, setExpandedRow] = useState(null);
 
-  const getEstadoStyle = (stock, habilitado) => {
-    if (habilitado === 'N') {
-      return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
+  const getEstadoStyle = (stock) => {
     if (stock === 0) {
       return 'bg-red-100 text-red-800 border-red-300';
     }
@@ -31,11 +28,10 @@ export default function TablaProductos({
     return 'bg-green-100 text-green-800 border-green-300';
   };
 
-  const getEstadoTexto = (stock, habilitado) => {
-    if (habilitado === 'N') return 'Deshabilitado';
+  const getEstadoTexto = (stock) => {
     if (stock === 0) return 'Sin Stock';
     if (stock <= 10) return 'Stock Bajo';
-    return 'En Stock';
+    return 'Con Stock';
   };
 
   const getSortIcon = (field) => {
@@ -79,16 +75,17 @@ export default function TablaProductos({
     <>
       {/* Vista Desktop */}
       <div className="hidden lg:block overflow-x-auto bg-white rounded-lg shadow">
-        <table className="w-full">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px]">
           <thead className="bg-gray-50 border-b">
             <tr>
               <th 
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                onClick={() => onSort('codigo_barra')}
+                onClick={() => onSort('cod_interno')}
               >
                 <div className="flex items-center space-x-1">
-                  <span>Código</span>
-                  {getSortIcon('codigo_barra')}
+                  <span>COD INTERNO</span>
+                  {getSortIcon('cod_interno')}
                 </div>
               </th>
               <th 
@@ -96,7 +93,7 @@ export default function TablaProductos({
                 onClick={() => onSort('nombre')}
               >
                 <div className="flex items-center space-x-1">
-                  <span>Producto</span>
+                  <span>PRODUCTO</span>
                   {getSortIcon('nombre')}
                 </div>
               </th>
@@ -105,7 +102,7 @@ export default function TablaProductos({
                 onClick={() => onSort('categoria')}
               >
                 <div className="flex items-center space-x-1">
-                  <span>Categoría</span>
+                  <span>CATEGORIA</span>
                   {getSortIcon('categoria')}
                 </div>
               </th>
@@ -114,7 +111,7 @@ export default function TablaProductos({
                 onClick={() => onSort('precio')}
               >
                 <div className="flex items-center justify-end space-x-1">
-                  <span>Precio</span>
+                  <span>PRECIO</span>
                   {getSortIcon('precio')}
                 </div>
               </th>
@@ -123,15 +120,12 @@ export default function TablaProductos({
                 onClick={() => onSort('stock')}
               >
                 <div className="flex items-center justify-center space-x-1">
-                  <span>Stock</span>
+                  <span>STOCK</span>
                   {getSortIcon('stock')}
                 </div>
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Estado
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
+                ACCIONES
               </th>
             </tr>
           </thead>
@@ -139,24 +133,24 @@ export default function TablaProductos({
             {productos.map((producto) => {
               const stock = parseInt(producto.stock) || 0;
               const precio = parseFloat(producto.precio) || 0;
-              const estadoStyle = getEstadoStyle(stock, producto.habilitado);
-              const estadoTexto = getEstadoTexto(stock, producto.habilitado);
+              const estadoStyle = getEstadoStyle(stock);
+              const estadoTexto = getEstadoTexto(stock);
 
               return (
                 <tr 
                   key={producto.codigo_barra}
                   className="hover:bg-gray-50 transition-colors"
                 >
-                  <td className="px-6 py-4 text-sm font-mono text-blue-600">
-                    {producto.codigo_barra}
+                  <td className="px-6 py-4 text-sm font-mono text-gray-700">
+                    {producto.cod_interno || '-'}
                   </td>
                   <td className="px-6 py-4">
                     <div className="font-medium text-gray-900 max-w-xs truncate">
                       {producto.nombre || producto.art_desc_vta}
                     </div>
-                    {producto.descripcion && (
-                      <div className="text-sm text-gray-500 max-w-xs truncate">
-                        {producto.descripcion}
+                    {producto.marca && (
+                      <div className="text-xs text-gray-500">
+                        {producto.marca}
                       </div>
                     )}
                   </td>
@@ -167,21 +161,16 @@ export default function TablaProductos({
                     <div className="font-semibold text-green-600">
                       {formatearPrecio(precio)}
                     </div>
-                    {producto.costo && (
-                      <div className="text-xs text-gray-500">
-                        Costo: {formatearPrecio(producto.costo)}
-                      </div>
-                    )}
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className="font-semibold text-lg">
                       {stock}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${estadoStyle}`}>
-                      {estadoTexto}
-                    </span>
+                    <div className="mt-1">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${estadoStyle}`}>
+                        {estadoTexto}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <div className="flex justify-center space-x-2">
@@ -190,7 +179,7 @@ export default function TablaProductos({
                           e.stopPropagation();
                           onEditarProducto(producto);
                         }}
-                        className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-100"
+                        className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-100 transition-colors"
                         title="Editar producto"
                       >
                         <PencilIcon className="h-4 w-4" />
@@ -200,7 +189,7 @@ export default function TablaProductos({
                           e.stopPropagation();
                           onEliminarProducto(producto);
                         }}
-                        className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-100"
+                        className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-100 transition-colors"
                         title="Eliminar producto"
                       >
                         <TrashIcon className="h-4 w-4" />
@@ -212,6 +201,7 @@ export default function TablaProductos({
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Vista Móvil */}
@@ -219,8 +209,8 @@ export default function TablaProductos({
         {productos.map((producto) => {
           const stock = parseInt(producto.stock) || 0;
           const precio = parseFloat(producto.precio) || 0;
-          const estadoStyle = getEstadoStyle(stock, producto.habilitado);
-          const estadoTexto = getEstadoTexto(stock, producto.habilitado);
+          const estadoStyle = getEstadoStyle(stock);
+          const estadoTexto = getEstadoTexto(stock);
           const isExpanded = expandedRow === producto.codigo_barra;
 
           return (
@@ -238,11 +228,11 @@ export default function TablaProductos({
                     <h3 className="font-medium text-gray-900 truncate">
                       {producto.nombre || producto.art_desc_vta}
                     </h3>
-                    <p className="text-sm text-gray-500 font-mono">
-                      {producto.codigo_barra}
+                    <p className="text-xs text-gray-500 font-mono">
+                      COD: {producto.cod_interno || '-'}
                     </p>
                     {producto.categoria && (
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-gray-400 mt-1">
                         {producto.categoria}
                       </p>
                     )}

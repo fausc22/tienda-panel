@@ -12,66 +12,59 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
-  ClockIcon,
-  UserIcon
+  UserIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 
 const Navbar = () => {
-  const { user, logout, getTimeRemaining } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(0);
 
-  // Actualizar tiempo restante cada minuto
-  useEffect(() => {
-    const updateTimer = () => {
-      const remaining = getTimeRemaining();
-      setTimeRemaining(remaining);
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 60000); // Actualizar cada minuto
-
-    return () => clearInterval(interval);
-  }, [getTimeRemaining]);
-
-  // Formatear tiempo restante
-  const formatTimeRemaining = (milliseconds) => {
-    if (milliseconds <= 0) return '0h 0m';
-    
-    const hours = Math.floor(milliseconds / (1000 * 60 * 60));
-    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${hours}h ${minutes}m`;
-  };
-
-  // Opciones del menú
-  const menuItems = [
+  // Opciones del menú base
+  const allMenuItems = [
     {
       name: 'Inicio',
       href: '/inicio',
       icon: HomeIcon,
-      description: 'Panel principal'
+      description: 'Panel principal',
+      roles: ['admin', 'kiosco'] // Todos los roles pueden ver Inicio
     },
     {
       name: 'Productos',
       href: '/productos',
       icon: CubeIcon,
-      description: 'Gestión de inventario'
+      description: 'Gestión de inventario',
+      roles: ['admin'] // Solo admin
     },
     {
       name: 'Página',
       href: '/pagina',
       icon: DocumentTextIcon,
-      description: 'Configuración web'
+      description: 'Configuración web',
+      roles: ['admin'] // Solo admin
     },
     {
       name: 'Estadísticas',
       href: '/estadisticas',
       icon: ChartBarIcon,
-      description: 'Reportes y métricas'
+      description: 'Reportes y métricas',
+      roles: ['admin'] // Solo admin
+    },
+    {
+      name: 'Usuarios',
+      href: '/usuarios',
+      icon: UserGroupIcon,
+      description: 'Gestión de usuarios',
+      roles: ['admin'] // Solo admin
     }
   ];
+
+  // Filtrar menú según el rol del usuario
+  const menuItems = allMenuItems.filter(item => {
+    const userRol = user?.rol?.toLowerCase() || 'admin';
+    return item.roles.includes(userRol);
+  });
 
   const handleLogout = () => {
     logout();
@@ -138,12 +131,6 @@ const Navbar = () => {
 
             {/* Información del usuario y logout - Desktop */}
             <div className="hidden md:flex items-center space-x-4">
-              {/* Tiempo de sesión */}
-              <div className="flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
-                <ClockIcon className="h-4 w-4" />
-                <span>{formatTimeRemaining(timeRemaining)}</span>
-              </div>
-
               {/* Usuario */}
               <div className="flex items-center space-x-2 text-sm text-gray-700">
                 <UserIcon className="h-4 w-4" />
@@ -195,10 +182,9 @@ const Navbar = () => {
                     <p className="font-medium text-gray-900 text-sm">
                       {user?.nombre || user?.username}
                     </p>
-                    <div className="flex items-center space-x-1 text-xs text-gray-600">
-                      <ClockIcon className="h-3 w-3" />
-                      <span>Sesión: {formatTimeRemaining(timeRemaining)}</span>
-                    </div>
+                    <p className="text-xs text-gray-600">
+                      {user?.rol === 'admin' ? 'Administrador' : 'Kiosco'}
+                    </p>
                   </div>
                 </div>
               </div>

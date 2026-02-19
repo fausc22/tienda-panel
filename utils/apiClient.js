@@ -1,8 +1,15 @@
 // utils/apiClient.js - Cliente API con manejo de autenticación
 import axios from 'axios';
 
-// Configuración base de la API
+// Configuración base de la API - DEBE estar definida en .env
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// Validar que la URL de API esté definida
+if (!API_BASE_URL) {
+  throw new Error(
+    '❌ NEXT_PUBLIC_API_URL no está definida. Por favor, configúrala en tu archivo .env'
+  );
+}
 
 // Crear instancia base de axios
 const apiClient = axios.create({
@@ -55,6 +62,17 @@ apiClient.interceptors.request.use(
 authApiClient.interceptors.request.use(
   (config) => {
     logApi(`📤 ${config.method?.toUpperCase()} ${config.url} [AUTH]`, 'info', 'REQUEST');
+    
+    // Agregar token JWT al header Authorization
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('admin_token');
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+        logApi(`🔑 Token JWT agregado al header`, 'info', 'REQUEST');
+      } else {
+        logApi(`⚠️ No se encontró token en localStorage`, 'warn', 'REQUEST');
+      }
+    }
     
     // Detectar tipo de contenido y establecer headers apropiados
     if (config.data instanceof FormData) {

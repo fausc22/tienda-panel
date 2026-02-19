@@ -2,6 +2,27 @@ import { createContext, useContext, useReducer, useEffect, useMemo, useRef } fro
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 
+// Función helper para decodificar JWT (sin verificar firma, solo lectura)
+const decodeJWT = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decodificando JWT:', error);
+    return null;
+  }
+};
+
+// Función helper para verificar si el token expiró
+const isTokenExpired = (decodedToken) => {
+  if (!decodedToken || !decodedToken.exp) return true;
+  return Date.now() >= decodedToken.exp * 1000;
+};
+
 // Estado inicial
 const initialState = {
   isAuthenticated: false,
@@ -92,36 +113,54 @@ export const AuthProvider = ({ children }) => {
 
   // Constantes de tiempo
   const SESSION_DURATION = 4 * 60 * 60 * 1000; // 4 horas en milisegundos
+  const REMEMBER_ME_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 días en milisegundos
   const WARNING_TIME = 10 * 60 * 1000; // 10 minutos antes de expirar
 
   // Verificar autenticación al cargar - SOLO UNA VEZ
   useEffect(() => {
     const checkAuth = () => {
       try {
-        const token = localStorage.getItem('admin_session');
-        const userData = localStorage.getItem('admin_user');
-        const sessionExpiry = localStorage.getItem('session_expiry');
+        const token = localStorage.getItem('admin_token');
         
-        if (token && userData && sessionExpiry) {
-          const expiryTime = parseInt(sessionExpiry);
-          const now = Date.now();
+        if (token) {
+          // Decodificar el JWT para obtener datos del usuario
+          const decodedToken = decodeJWT(token);
           
-          // Verificar si la sesión ha expirado
-          if (now >= expiryTime) {
-            // Sesión expirada, limpiar datos
+          if (!decodedToken || isTokenExpired(decodedToken)) {
+            // Token inválido o expirado
+            cleanupSession();
+            dispatch({ type: AUTH_ACTIONS.SESSION_EXPIRED });
+            return;
+          }
+          
+          // Construir objeto de usuario desde el token
+          const userData = {
+            id: decodedToken.id,
+            username: decodedToken.usuario,
+            usuario: decodedToken.usuario,
+            rol: decodedToken.rol,
+            loginTime: decodedToken.iat ? new Date(decodedToken.iat * 1000).toISOString() : new Date().toISOString(),
+          };
+          
+          // Calcular tiempo de expiración desde el token (exp está en segundos)
+          const expiryTime = decodedToken.exp ? decodedToken.exp * 1000 : Date.now() + SESSION_DURATION;
+          const now = Date.now();
+          const timeRemaining = expiryTime - now;
+          
+          // Verificar si aún queda tiempo
+          if (timeRemaining <= 0) {
             cleanupSession();
             dispatch({ type: AUTH_ACTIONS.SESSION_EXPIRED });
             return;
           }
           
           // Sesión válida, configurar timers
-          const timeRemaining = expiryTime - now;
           setupSessionTimers(timeRemaining);
           
           dispatch({
             type: AUTH_ACTIONS.LOGIN_SUCCESS,
             payload: {
-              user: JSON.parse(userData),
+              user: userData,
               sessionExpiry: expiryTime,
             },
           });
@@ -145,9 +184,10 @@ export const AuthProvider = ({ children }) => {
 
   // Función para limpiar la sesión
   const cleanupSession = () => {
-    localStorage.removeItem('admin_session');
-    localStorage.removeItem('admin_user');
-    localStorage.removeItem('session_expiry');
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_session'); // Mantener por compatibilidad
+    localStorage.removeItem('admin_user'); // Mantener por compatibilidad
+    localStorage.removeItem('session_expiry'); // Mantener por compatibilidad
     clearSessionTimers();
   };
 
@@ -186,44 +226,59 @@ export const AuthProvider = ({ children }) => {
     }, timeRemaining);
   };
 
-  const login = async (credentials) => {
+  const login = async (credentials, rememberMe = true) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        throw new Error('NEXT_PUBLIC_API_URL no está configurada. Por favor, configúrala en tu archivo .env');
+      }
       const response = await fetch(`${apiUrl}/admin/loginCheck`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(credentials),
+        body: JSON.stringify({
+          ...credentials,
+          rememberMe: rememberMe
+        }),
       });
 
       const result = await response.json();
 
-      if (response.status === 200) {
-        // Calcular tiempo de expiración (4 horas desde ahora)
-        const now = Date.now();
-        const sessionExpiry = now + SESSION_DURATION;
+      if (response.status === 200 && result.token) {
+        // Guardar el token JWT
+        localStorage.setItem('admin_token', result.token);
         
-        // Guardar datos en localStorage
+        // Decodificar el token para obtener datos del usuario
+        const decodedToken = decodeJWT(result.token);
+        
+        if (!decodedToken) {
+          throw new Error('Error al procesar token de autenticación');
+        }
+        
+        // Construir objeto de usuario desde el token o desde la respuesta
         const userData = {
-          username: credentials.username,
+          id: result.usuario?.id || decodedToken.id,
+          username: result.usuario?.usuario || decodedToken.usuario || credentials.username,
+          usuario: result.usuario?.usuario || decodedToken.usuario || credentials.username,
+          rol: result.usuario?.rol || decodedToken.rol || 'admin',
           loginTime: new Date().toISOString(),
         };
         
-        localStorage.setItem('admin_session', 'authenticated');
-        localStorage.setItem('admin_user', JSON.stringify(userData));
-        localStorage.setItem('session_expiry', sessionExpiry.toString());
+        // Calcular tiempo de expiración desde el token (exp está en segundos)
+        const expiryTime = decodedToken.exp ? decodedToken.exp * 1000 : Date.now() + SESSION_DURATION;
+        const timeRemaining = expiryTime - Date.now();
         
         // Configurar timers para esta sesión
-        setupSessionTimers(SESSION_DURATION);
+        setupSessionTimers(timeRemaining);
         
         dispatch({
           type: AUTH_ACTIONS.LOGIN_SUCCESS,
           payload: { 
             user: userData,
-            sessionExpiry: sessionExpiry,
+            sessionExpiry: expiryTime,
           },
         });
 

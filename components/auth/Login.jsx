@@ -8,6 +8,7 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 const Login = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
+  const [rememberMe, setRememberMe] = useState(true); // Marcado por defecto
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const toastShown = useRef(false);
@@ -58,7 +59,7 @@ const Login = () => {
     setIsSubmitting(true);
     
     try {
-      const result = await login(formData);
+      const result = await login(formData, rememberMe);
       
       if (result.success) {
         toast.success(result.message);
@@ -207,6 +208,20 @@ const Login = () => {
                         </button>
                       }
                     />
+                  </div>
+
+                  {/* Checkbox Recuérdame */}
+                  <div className="flex items-center">
+                    <input
+                      id="rememberMe"
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                    />
+                    <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700 cursor-pointer">
+                      Recuérdame (7 días)
+                    </label>
                   </div>
 
                   <Button
