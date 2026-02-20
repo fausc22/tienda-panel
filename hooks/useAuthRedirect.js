@@ -23,8 +23,8 @@ export const useAuthRedirect = (requireAuth = false, redirectTo = null, allowedR
   const hasRedirected = useRef(false);
 
   useEffect(() => {
-    // No hacer nada si está cargando o ya se redirigió
-    if (isLoading || hasRedirected.current) return;
+    // No hacer nada hasta que el router esté listo (pathname correcto) y auth cargada
+    if (!router.isReady || isLoading || hasRedirected.current) return;
 
     // Si la página requiere auth y no está autenticado
     if (requireAuth && !isAuthenticated) {
@@ -36,8 +36,8 @@ export const useAuthRedirect = (requireAuth = false, redirectTo = null, allowedR
 
     // Verificar permisos de rol si está autenticado y hay restricciones
     if (requireAuth && isAuthenticated && user) {
-      const userRol = user.rol?.toLowerCase() || 'admin';
-      const currentPath = router.pathname;
+      const userRol = (user.rol && String(user.rol).toLowerCase()) || 'admin';
+      const currentPath = (router.pathname || '').replace(/\/$/, '') || '/';
 
       // Si se especificaron roles permitidos, verificar contra ellos
       if (allowedRoles && !allowedRoles.map(r => r.toLowerCase()).includes(userRol)) {
@@ -47,8 +47,8 @@ export const useAuthRedirect = (requireAuth = false, redirectTo = null, allowedR
         return;
       }
 
-      // Verificar si la ruta actual está permitida para el rol del usuario
-      const allowedRoutes = ROUTES_BY_ROLE[userRol] || ROUTES_BY_ROLE.admin;
+      // Verificar si la ruta actual está permitida para el rol del usuario (rutas sin barra final)
+      const allowedRoutes = (ROUTES_BY_ROLE[userRol] || ROUTES_BY_ROLE.admin).map(r => r.replace(/\/$/, ''));
       if (!allowedRoutes.includes(currentPath)) {
         hasRedirected.current = true;
         console.log(`🚫 Ruta ${currentPath} no permitida para rol ${userRol}, redirigiendo a /inicio`);
@@ -65,7 +65,7 @@ export const useAuthRedirect = (requireAuth = false, redirectTo = null, allowedR
       router.replace(destination);
       return;
     }
-  }, [isAuthenticated, isLoading, requireAuth, redirectTo, router, user, allowedRoles]);
+  }, [isAuthenticated, isLoading, requireAuth, redirectTo, router.isReady, router.pathname, router, user, allowedRoles]);
 
   // Reset flag cuando cambie la ruta
   useEffect(() => {

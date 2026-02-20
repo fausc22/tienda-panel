@@ -9,7 +9,8 @@ import {
   TagIcon,
   BoltIcon,
   StarIcon,
-  ClockIcon // 🆕 NUEVO
+  ClockIcon,
+  BanknotesIcon
 } from '@heroicons/react/24/outline';
 
 // Hooks personalizados
@@ -18,7 +19,8 @@ import { useImagenes } from '../hooks/pagina/useImagenes';
 import { useOfertas } from '../hooks/pagina/useOfertas';
 import { useDestacados } from '../hooks/pagina/useDestacados';
 import { useLiquidacion } from '../hooks/pagina/useLiquidacion';
-import { useHorariosAvanzado } from '../hooks/pagina/useHorariosAvanzado'; // 🆕 NUEVO
+import { useHorariosAvanzado } from '../hooks/pagina/useHorariosAvanzado';
+import { useReglasPago } from '../hooks/pagina/useReglasPago';
 
 // Componentes
 import ConfiguracionGeneral from '../components/pagina/ConfiguracionGeneral';
@@ -26,7 +28,8 @@ import GestionImagenes from '../components/pagina/GestionImagenes';
 import GestionOfertas from '../components/pagina/GestionOfertas';
 import GestionDestacados from '../components/pagina/GestionDestacados';
 import GestionLiquidacion from '../components/pagina/GestionLiquidacion';
-import GestionHorarios from '../components/pagina/GestionHorarios'; // 🆕 NUEVO
+import GestionHorarios from '../components/pagina/GestionHorarios';
+import GestionReglasPago from '../components/pagina/GestionReglasPago';
 import EstadisticasPagina from '../components/pagina/EstadisticasPagina';
 import ModalProductoSelector from '../components/pagina/ModalProductoSelector';
 
@@ -44,7 +47,8 @@ function PaginaContent() {
   const ofertas = useOfertas();
   const destacados = useDestacados();
   const liquidacion = useLiquidacion();
-  const horariosAvanzado = useHorariosAvanzado(); // 🆕 NUEVO
+  const horariosAvanzado = useHorariosAvanzado();
+  const reglasPago = useReglasPago();
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -56,7 +60,8 @@ function PaginaContent() {
       ofertas.cargarOfertas();
       destacados.cargarDestacados();
       liquidacion.cargarLiquidacion();
-      horariosAvanzado.cargarHorarios(); // 🆕 NUEVO
+      horariosAvanzado.cargarHorarios();
+      reglasPago.cargarTodo();
     }
   }, [user, authLoading]);
 
@@ -115,6 +120,12 @@ function PaginaContent() {
       nombre: 'Productos en Liquidación',
       icono: BoltIcon,
       descripcion: 'Gestionar productos en liquidación con precios finales'
+    },
+    {
+      id: 'reglas-pago',
+      nombre: 'Reglas de pago y cupones',
+      icono: BanknotesIcon,
+      descripcion: 'Reglas de envío gratis o descuento por monto y cupones de descuento'
     }
   ];
 
@@ -173,6 +184,9 @@ function PaginaContent() {
             onAgregarProducto={() => handleAgregarProducto('liquidacion')}
           />
         );
+      
+      case 'reglas-pago':
+        return <GestionReglasPago {...reglasPago} />;
       
       default:
         return <ConfiguracionGeneral {...configuracion} />;

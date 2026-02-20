@@ -259,6 +259,24 @@ export default function ConfiguracionGeneral({
                 Costo adicional por kilómetro de distancia
               </p>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Radio máximo de entrega (km)
+              </label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={formData.storeDeliveryMaxKm ?? ''}
+                onChange={(e) => handleCampoChange('storeDeliveryMaxKm', e.target.value === '' ? '' : e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="0 = sin límite"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                0 o vacío = sin límite. Ej: 2, 15 para limitar la zona de entrega.
+              </p>
+            </div>
           </div>
         </div>
 

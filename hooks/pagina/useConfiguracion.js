@@ -51,6 +51,7 @@ export const useConfiguracion = () => {
           storeEmail: '',
           storeDeliveryBase: '0',
           storeDeliveryKm: '0',
+          storeDeliveryMaxKm: '0',
           iva: '0',
           pageStatus: 'ACTIVA' // ← DEFAULT
         };
@@ -71,6 +72,7 @@ export const useConfiguracion = () => {
         storeEmail: '',
         storeDeliveryBase: '0',
         storeDeliveryKm: '0',
+        storeDeliveryMaxKm: '0',
         iva: '0',
         pageStatus: 'ACTIVA' // ← DEFAULT
       };
@@ -188,6 +190,9 @@ export const useConfiguracion = () => {
     if (config.storeDeliveryKm && isNaN(parseFloat(config.storeDeliveryKm))) {
       errores.push('Costo por kilómetro debe ser un número válido');
     }
+    if (config.storeDeliveryMaxKm !== undefined && config.storeDeliveryMaxKm !== '' && (isNaN(parseFloat(config.storeDeliveryMaxKm)) || parseFloat(config.storeDeliveryMaxKm) < 0)) {
+      errores.push('Radio máximo de entrega debe ser 0 o un número positivo');
+    }
     
     if (config.iva && (isNaN(parseInt(config.iva)) || parseInt(config.iva) < 0 || parseInt(config.iva) > 4)) {
       errores.push('Nivel de IVA debe ser un número entre 0 y 4');
@@ -230,6 +235,7 @@ export const useConfiguracion = () => {
       storeEmail: '',
       storeDeliveryBase: '0',
       storeDeliveryKm: '0',
+      storeDeliveryMaxKm: '0',
       mercadoPagoToken: '',
       iva: '0',
       pageStatus: 'ACTIVA' // ← DEFAULT
